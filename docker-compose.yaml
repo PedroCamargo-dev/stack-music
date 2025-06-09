@@ -1,0 +1,81 @@
+services:
+  music-download-frontend:
+    build:
+      context: ./music-download
+    container_name: music-download
+    ports:
+      - "3101:3101"
+    environment:
+      - API_DOWNLOAD_URL=http://music-download-api:8080
+    restart: always
+    networks:
+      - cloudflared
+
+  music-download-backend:
+    build:
+      context: ./music-download-api
+    container_name: music-download-api
+    ports:
+      - "8080:8080"
+    environment:
+      - SPOTIFY_CLIENT_ID=
+      - SPOTIFY_CLIENT_SECRET=
+      - YOUTUBE_API_KEY=
+    restart: always
+    networks:
+      - cloudflared
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  yt-dlp:
+    build:
+      context: ./yt-dlp
+    container_name: yt-dlp
+    restart: always
+    volumes:
+      - ./data/downloads:/downloads
+    environment:
+      - YT_DLP_OUTPUT=/downloads/%(title)s.%(ext)s
+    stdin_open: true
+    tty: true
+    networks:
+      - cloudflared
+
+  spotdl:
+    build:
+      context: ./spotDL
+    container_name: spotDL
+    restart: always
+    volumes:
+      - ./data/downloads:/music
+    stdin_open: true
+    tty: true
+    networks:
+      - cloudflared
+
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    restart: unless-stopped
+    ports:
+      - "4533:4533"
+    volumes:
+      - ./data/downloads:/music
+      - ./data/navidrome:/data
+    environment:
+      - ND_SCANSCHEDULE=1h
+      - ND_MUSICFOLDER=/music
+      - ND_LOGLEVEL=info
+      - ND_LASTFM_ENABLED=true
+      - ND_LASTFM_APIKEY=
+      - ND_LASTFM_SECRET=
+      - ND_LASTFM_LANGUAGE=pt
+      - ND_SPOTIFY_ID=
+      - ND_SPOTIFY_SECRET=
+    networks:
+      - cloudflared
+
+networks:
+  cloudflared:
+    external: true
+    name: cloudflared
