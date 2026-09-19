@@ -1,0 +1,14 @@
+{
+  "id": "session-1789852396958",
+  "startedAt": "2026-09-19T21:13:16.958Z",
+  "cwd": "/Users/pedrocamargo/projects/stack-music",
+  "context": {},
+  "metrics": {
+    "edits": 0,
+    "commands": 0,
+    "tasks": 0,
+    "errors": 0
+  },
+  "endedAt": "2026-09-19T21:13:20.523Z",
+  "duration": 3568
+}
