@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api/subsonic_client.dart';
 import '../../core/app_state.dart';
 import '../../core/models/subsonic_models.dart';
 import '../../core/theme/app_theme.dart';
@@ -20,13 +21,14 @@ class _ArtistScreenState extends State<ArtistScreen>
  late final TabController _tabController;
  List<SubsonicAlbum> albums = [];
  List<SubsonicSong> topSongs = [];
+ ArtistInfo? info;
  bool loading = true;
  String? error;
 
  @override
  void initState() {
  super.initState();
- _tabController = TabController(length: 2, vsync: this);
+ _tabController = TabController(length: 3, vsync: this);
  _load();
  }
 
@@ -37,10 +39,12 @@ class _ArtistScreenState extends State<ArtistScreen>
  final results = await Future.wait([
  client.getAlbumsOfArtist(widget.artist.id),
  client.getTopSongs(widget.artist.name, count: 15),
+ client.getArtistInfo(widget.artist.id),
  ]);
  setState(() {
  albums = results[0] as List<SubsonicAlbum>;
  topSongs = results[1] as List<SubsonicSong>;
+ info = results[2] as ArtistInfo?;
  loading = false;
  });
  } catch (e) {
@@ -119,7 +123,7 @@ class _ArtistScreenState extends State<ArtistScreen>
  labelColor: textP,
  unselectedLabelColor: textS,
  indicatorColor: AppColors.primary,
- tabs: const [Tab(text: 'ALBUMS'), Tab(text: 'POPULAR')],
+ tabs: const [Tab(text: 'ALBUMS'), Tab(text: 'POPULAR'), Tab(text: 'ABOUT')],
  ),
  ),
  ],
@@ -146,6 +150,17 @@ class _ArtistScreenState extends State<ArtistScreen>
  ]),
  );
  },
+ ),
+ // ABOUT
+ ListView(
+ padding: const EdgeInsets.all(16),
+ children: [
+ if (info?.biography != null)
+ Text(info!.biography!, style: TextStyle(fontSize: 14, height: 1.6, color: AppColors.textSecondary(b)))
+ else
+ Center(child: Text('Sem biografia (requer integracoes externas no servidor)',
+ style: TextStyle(fontSize: 13, color: AppColors.textSecondary(b)))),
+ ],
  ),
  // POPULAR
  topSongs.isEmpty
