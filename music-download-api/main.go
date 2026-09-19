@@ -291,8 +291,8 @@ func getSpotifyItemInfo(itemType, itemID string) (*TrackInfo, error) {
 // getYouTubeVideoInfo obtém informações de um vídeo do YouTube
 func getYouTubeVideoInfo(videoID string) (*TrackInfo, error) {
 	endpoint := fmt.Sprintf(
-		"https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=%s&key=AIzaSyC7pR4w_PkcpfiCsZ_PnGMLynwf0NwCl7g",
-		videoID,
+		"https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=%s&key=%s",
+		videoID, youtubeAPIKey,
 	)
 
 	resp, err := http.Get(endpoint)
@@ -886,12 +886,36 @@ func downloadMusic(c *gin.Context) {
 			if strings.Contains(urlStr, "spotify") {
 				cmd = exec.Command("docker", "exec", "-i", "spotDL", "spotdl", urlStr)
 			} else {
-				cmd = exec.Command(
+				// Integração ytmdl: extrai o título via yt-dlp e baixa com metadados/capa
+				titleCmd := exec.Command(
 					"docker", "exec", "-i", "yt-dlp",
-					"yt-dlp", "-f", "bestaudio", "--extract-audio",
-					"--audio-format", "mp3", "--progress",
-					"-o", "/downloads/%(title)s.%(ext)s", urlStr,
+					"yt-dlp", "--print", "title", "--no-warnings", urlStr,
 				)
+				titleOut, titleErr := titleCmd.Output()
+				if titleErr != nil || len(strings.TrimSpace(string(titleOut))) == 0 {
+					log.WithError(titleErr).Errorf("Failed to extract title for ytmdl, falling back to yt-dlp: %s", urlStr)
+					cmd = exec.Command(
+						"docker", "exec", "-i", "yt-dlp",
+						"yt-dlp", "-f", "bestaudio", "--extract-audio",
+						"--audio-format", "mp3", "--progress",
+						"-o", "/downloads/%(title)s.%(ext)s", urlStr,
+					)
+				} else {
+					songTitle := strings.TrimSpace(string(titleOut))
+					mu.Lock()
+					c.Writer.Write([]byte(fmt.Sprintf("[%s] Using ytmdl with title: %s\n", urlStr, songTitle)))
+					c.Writer.Flush()
+					mu.Unlock()
+					cmd = exec.Command(
+						"docker", "exec", "-i", "yt-dlp",
+						"ytmdl", "-q", "--nolocal",
+						"--url", urlStr,
+						"--song", songTitle,
+						"--format", "mp3",
+						"--output-dir", "/downloads",
+						"--choice", "1",
+					)
+				}
 			}
 
 			stdout, err := cmd.StdoutPipe()

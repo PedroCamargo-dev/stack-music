@@ -8,7 +8,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Instalando o yt-dlp diretamente do repositório oficial
-RUN pip install --no-cache-dir yt-dlp
+RUN pip install --no-cache-dir yt-dlp ytmdl
 
 # Criando o diretório para downloads
 RUN mkdir /downloads
