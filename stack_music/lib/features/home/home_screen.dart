@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_state.dart';
 import '../../core/models/subsonic_models.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/fade_slide_in.dart';
 import '../../shared/widgets.dart';
 
 /// Home (refs 17.50.11 + 17.43.15): hero "Just for you", carrosséis
@@ -94,7 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
  itemCount: newest.length,
  itemBuilder: (_, i) {
  final album = newest[i];
- return GestureDetector(
+ return FadeSlideIn(
+ index: i,
+ child: GestureDetector(
  onTap: () => Navigator.of(context).pushNamed('/album', arguments: album),
  child: Container(
  width: 170,
@@ -107,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
  Text(album.artist, maxLines: 1,
  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(b))),
  ]),
+ ),
  ),
  );
  },
