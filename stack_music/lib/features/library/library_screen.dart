@@ -95,6 +95,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         _LibTab.starred => 'Favoritos (${starred.length})',
                         _LibTab.artists => 'Artistas (${artists.length})',
                         _LibTab.albums => 'Álbuns (${albums.length})',
+                        _LibTab.radios => 'Rádios (${radios.length})',
                       }),
                       selected: tab == t,
                       onSelected: (_) => setState(() => tab = t),
@@ -162,6 +163,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   style: TextStyle(fontSize: 13, color: textS)),
               trailing: Icon(Icons.chevron_right, color: textS),
               onTap: () => Navigator.of(context).pushNamed('/artist', arguments: a),
+            );
+          },
+        );
+      case _LibTab.radios:
+        if (radios.isEmpty) return _empty('Nenhuma rádio configurada no servidor');
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 8),
+          itemCount: radios.length,
+          itemBuilder: (_, i) {
+            final r = radios[i];
+            return ListTile(
+              leading: const CircleAvatar(child: Icon(Icons.radio)),
+              title: Text(r.name,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textP)),
+              subtitle: Text(r.homepageUrl ?? r.streamUrl,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: textS)),
+              trailing: Icon(Icons.play_arrow, color: AppColors.primary),
+              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Stream: ${r.name}'))),
             );
           },
         );
