@@ -1,0 +1,151 @@
+import 'package:audio_service/audio_service.dart';
+import 'package:just_audio/just_audio.dart';
+
+import '../api/subsonic_client.dart';
+import '../models/subsonic_models.dart';
+
+/// Handler do audio_service: expõe controles na notificação/lock screen,
+/// mantém fila, shuffle, repeat e faz scrobble ao completar faixa.
+class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
+ final SubsonicClient client;
+ final AudioPlayer player = AudioPlayer();
+
+ final List<SubsonicSong> _queue = [];
+ int _index = -1;
+ bool _shuffle = false;
+ bool _scrobbled = false;
+
+ PlayerHandler(this.client) {
+ player.playbackEventStream.map(_toState).pipe(playbackState);
+ player.sequenceStateStream.listen(_onSequenceChanged);
+ player.playerStateStream.listen((s) {
+ if (s.processingState == ProcessingState.completed) {
+ _scrobbleIfDue();
+ skipToNext();
+ }
+ });
+ }
+
+ List<SubsonicSong> get songs => _queue;
+ SubsonicSong? get currentSong =>
+ _index >= 0 && _index < _queue.length ? _queue[_index] : null;
+
+ void _onSequenceChanged(SequenceState? state) {
+ final i = state?.currentIndex ?? -1;
+ if (i != _index) {
+ _index = i;
+ _scrobbled = false;
+ mediaItem.add(_toMediaItem(currentSong));
+ }
+ }
+
+ PlaybackState _toState(PlaybackEvent event) => PlaybackState(
+ controls: [
+ MediaControl.skipToPrevious,
+ if (player.playing) MediaControl.pause else MediaControl.play,
+ MediaControl.skipToNext,
+ ],
+ systemActions: const {
+ MediaAction.seek, MediaAction.seekForward, MediaAction.seekBackward,
+ },
+ androidCompactActionIndices: const [0, 1, 2],
+ processingState: const {
+ ProcessingState.idle: AudioProcessingState.idle,
+ ProcessingState.loading: AudioProcessingState.loading,
+ ProcessingState.buffering: AudioProcessingState.buffering,
+ ProcessingState.ready: AudioProcessingState.ready,
+ ProcessingState.completed: AudioProcessingState.completed,
+ }[player.processingState]!,
+ playing: player.playing,
+ updatePosition: player.position,
+ bufferedPosition: player.bufferedPosition,
+ speed: player.speed,
+ queueLength: _queue.length,
+ );
+
+ MediaItem _toMediaItem(SubsonicSong? s) {
+ if (s == null) return const MediaItem(id: '', title: '');
+ return MediaItem(
+ id: s.id,
+ title: s.title,
+ artist: s.artist,
+ album: s.album,
+ duration: Duration(seconds: s.duration),
+ artUri: client.coverArtUrl(s.coverArt).isEmpty
+ ? null
+ : Uri.tryParse(client.coverArtUrl(s.coverArt, size: 300)),
+ );
+ }
+
+ void _scrobbleIfDue() {
+ final s = currentSong;
+ if (s != null && !_scrobbled) {
+ _scrobbled = true;
+ client.scrobble(s.id).catchError((_) {});
+ }
+ }
+
+ /// Monta a fila com fontes de stream e reproduz a partir de [startIndex].
+ Future<void> playQueue(List<SubsonicSong> songs, {int startIndex = 0}) async {
+ _queue
+ ..clear()
+ ..addAll(songs);
+ final sources = songs
+ .map((s) => AudioSource.uri(Uri.parse(client.streamUrl(s.id))))
+ .toList();
+ await player.setAudioSources(sources, initialIndex: startIndex);
+ play();
+ }
+
+ @override
+ Future<void> play() => player.play();
+ @override
+ Future<void> pause() => player.pause();
+
+ @override
+ Future<void> seek(Duration position) => player.seek(position);
+
+ @override
+ Future<void> skipToNext() {
+ _scrobbleIfDue();
+ return player.seekToNext();
+ }
+
+ @override
+ Future<void> skipToPrevious() => player.seekToPrevious();
+
+ @override
+ Future<void> stop() async {
+ await player.stop();
+ _queue.clear();
+ _index = -1;
+ await super.stop();
+ }
+
+ @override
+ Future<void> setShuffleMode(AudioServiceShuffleMode mode) async {
+ _shuffle = mode != AudioServiceShuffleMode.none;
+ if (mode == AudioServiceShuffleMode.all) {
+ await player.shuffle();
+ }
+ return super.setShuffleMode(mode);
+ }
+
+ bool get isShuffled => _shuffle;
+
+ Future<void> toggleShuffle() => setShuffleMode(
+ _shuffle ? AudioServiceShuffleMode.none : AudioServiceShuffleMode.all);
+
+ /// Adiciona ao fim da fila atual.
+ Future<void> addToQueue(SubsonicSong song) async {
+ _queue.add(song);
+ await player.addAudioSource(
+ AudioSource.uri(Uri.parse(client.streamUrl(song.id))));
+ }
+
+ Future<void> savePlayQueue() async {
+ if (_queue.isEmpty) return;
+ final ids = _queue.map((s) => s.id).toList();
+ client.savePlayQueue(ids, current: currentSong?.id).catchError((_) {});
+ }
+}
