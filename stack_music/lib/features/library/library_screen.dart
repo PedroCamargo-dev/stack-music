@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api/subsonic_client.dart';
 import '../../core/app_state.dart';
 import '../../core/models/subsonic_models.dart';
 import '../../core/theme/app_theme.dart';
@@ -15,7 +16,7 @@ class LibraryScreen extends StatefulWidget {
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-enum _LibTab { playlists, starred, artists, albums }
+enum _LibTab { playlists, starred, artists, albums, radios }
 
 class _LibraryScreenState extends State<LibraryScreen> {
   _LibTab tab = _LibTab.playlists;
@@ -26,6 +27,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<SubsonicSong> starred = [];
   List<SubsonicArtist> artists = [];
   List<SubsonicAlbum> albums = [];
+ List<RadioStation> radios = [];
 
   @override
   void initState() {
