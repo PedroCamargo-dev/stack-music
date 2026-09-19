@@ -212,6 +212,52 @@ class SubsonicClient {
  Future<void> unstar(String id) => _get('unstar', {'id': id});
  Future<void> scrobble(String id) => _get('scrobble', {'id': id, 'submission': true});
 
+ // ---- Music folders / Internet radio / Bookmarks / NowPlaying ----
+ Future<List<String>> getMusicFolders() async {
+ final sub = await _get('getMusicFolders');
+ final list = (sub['musicFolders'] as Map<String, dynamic>)['musicFolder'] as List? ?? [];
+ return list.cast<Map<String, dynamic>>().map((f) => f['name'].toString()).toList();
+ }
+
+ Future<List<SubsonicSong>> getNowPlaying() async {
+ final sub = await _get('getNowPlaying');
+ final list = (sub['nowPlaying'] as Map<String, dynamic>)['entry'] as List? ?? [];
+ return list.cast<Map<String, dynamic>>().map(SubsonicSong.fromJson).toList();
+ }
+
+ Future<List<RadioStation>> getInternetRadioStations() async {
+ final sub = await _get('getInternetRadioStations');
+ final list = sub['internetRadioStations'] != null
+ ? (sub['internetRadioStations'] as Map<String, dynamic>)['internetRadioStation'] as List? ?? []
+ : [];
+ return list.cast<Map<String, dynamic>>().map(RadioStation.fromJson).toList();
+ }
+
+ Future<ArtistInfo?> getArtistInfo(String artistId) async {
+ final sub = await _get('getArtistInfo2', {'id': artistId, 'count': 5});
+ final info = sub['artistInfo2'] as Map<String, dynamic>?;
+ if (info == null) return null;
+ return ArtistInfo(
+ biography: info['biography'],
+ musicBrainzId: info['musicBrainzId'],
+ lastFmUrl: info['lastFmUrl'],
+ );
+ }
+
+ Future<AlbumInfo?> getAlbumInfo(String albumId) async {
+ final sub = await _get('getAlbumInfo2', {'id': albumId});
+ final info = sub['albumInfo'] as Map<String, dynamic>?;
+ if (info == null) return null;
+ return AlbumInfo(notes: info['notes'], musicBrainzId: info['musicBrainzId']);
+ }
+
+ Future<void> setRating(String id, int rating) =>
+ _get('setRating', {'id': id, 'rating': rating});
+
+ Future<Map<String, dynamic>> getScanStatus() async => _get('getScanStatus');
+
+ Future<void> startScan() => _get('startScan', {'fullScan': false});
+
  // ---- Play queue ----
  Future<List<SubsonicSong>> getPlayQueue() async {
  final sub = await _get('getPlayQueue');
@@ -233,6 +279,37 @@ class Lyrics {
  final String title;
  final String text;
  Lyrics({required this.artist, required this.title, required this.text});
+}
+
+class RadioStation {
+ final String id;
+ final String name;
+ final String streamUrl;
+ final String? homepageUrl;
+
+ RadioStation({required this.id, required this.name, required this.streamUrl, this.homepageUrl});
+
+ factory RadioStation.fromJson(Map<String, dynamic> j) => RadioStation(
+ id: j['id'].toString(),
+ name: j['name'] ?? '',
+ streamUrl: j['streamUrl'] ?? '',
+ homepageUrl: j['homePageUrl'],
+ );
+}
+
+class ArtistInfo {
+ final String? biography;
+ final String? musicBrainzId;
+ final String? lastFmUrl;
+
+ ArtistInfo({this.biography, this.musicBrainzId, this.lastFmUrl});
+}
+
+class AlbumInfo {
+ final String? notes;
+ final String? musicBrainzId;
+
+ AlbumInfo({this.notes, this.musicBrainzId});
 }
 
 class SubsonicException implements Exception {
