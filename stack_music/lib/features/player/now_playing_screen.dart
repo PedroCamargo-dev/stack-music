@@ -2,6 +2,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api/subsonic_client.dart';
 import '../../core/app_state.dart';
 import '../../core/models/subsonic_models.dart';
 import '../../core/theme/app_theme.dart';
@@ -137,8 +138,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  Padding(
  padding: const EdgeInsets.symmetric(horizontal: 24),
  child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
- _fmt(pos),
- _fmt(total),
+ Text(_fmt(pos), style: const TextStyle(fontSize: 12, color: Colors.white70)),
+ Text(_fmt(total), style: const TextStyle(fontSize: 12, color: Colors.white70)),
  ])),
  ]);
  },

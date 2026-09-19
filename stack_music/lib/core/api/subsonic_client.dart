@@ -106,7 +106,6 @@ class SubsonicClient {
  }
 
  Future<List<SubsonicSong>> getSongsOfAlbum(String albumId) async {
- final album = await getAlbum(albumId);
  final sub = await _get('getAlbum', {'id': albumId});
  final songs = ((sub['album'] as Map<String, dynamic>)['song'] as List? ?? []);
  return songs.cast<Map<String, dynamic>>().map(SubsonicSong.fromJson).toList()

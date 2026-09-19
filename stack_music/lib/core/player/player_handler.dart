@@ -60,7 +60,6 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  updatePosition: player.position,
  bufferedPosition: player.bufferedPosition,
  speed: player.speed,
- queueLength: _queue.length,
  );
 
  MediaItem _toMediaItem(SubsonicSong? s) {
@@ -90,10 +89,9 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  _queue
  ..clear()
  ..addAll(songs);
- final sources = songs
- .map((s) => AudioSource.uri(Uri.parse(client.streamUrl(s.id))))
- .toList();
- await player.setAudioSources(sources, initialIndex: startIndex);
+ final source = ConcatenatingAudioSource(
+ children: songs.map((s) => AudioSource.uri(Uri.parse(client.streamUrl(s.id)))).toList());
+ await player.setAudioSource(source, initialIndex: startIndex);
  play();
  }
 
@@ -123,12 +121,12 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  }
 
  @override
- Future<void> setShuffleMode(AudioServiceShuffleMode mode) async {
- _shuffle = mode != AudioServiceShuffleMode.none;
- if (mode == AudioServiceShuffleMode.all) {
+ Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
+ _shuffle = shuffleMode != AudioServiceShuffleMode.none;
+ if (shuffleMode == AudioServiceShuffleMode.all) {
  await player.shuffle();
  }
- return super.setShuffleMode(mode);
+ return super.setShuffleMode(shuffleMode);
  }
 
  bool get isShuffled => _shuffle;
@@ -139,8 +137,8 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  /// Adiciona ao fim da fila atual.
  Future<void> addToQueue(SubsonicSong song) async {
  _queue.add(song);
- await player.addAudioSource(
- AudioSource.uri(Uri.parse(client.streamUrl(song.id))));
+ await (player.audioSource as ConcatenatingAudioSource)
+ .add(AudioSource.uri(Uri.parse(client.streamUrl(song.id))));
  }
 
  Future<void> savePlayQueue() async {

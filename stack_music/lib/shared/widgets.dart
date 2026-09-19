@@ -1,11 +1,10 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../app_state.dart';
-import '../models/subsonic_models.dart';
-import '../theme/app_theme.dart';
+import '../core/app_state.dart';
+import '../core/models/subsonic_models.dart';
+import '../core/theme/app_theme.dart';
 
 /// Capa quadrada 1:1 via getCoverArt, com placeholder de nota musical.
 class CoverArt extends StatelessWidget {
@@ -19,7 +18,7 @@ class CoverArt extends StatelessWidget {
  Widget build(BuildContext context) {
  final url = context.read<AppState>().subsonic?.coverArtUrl(coverArtId, size: 600) ?? '';
  if (url.isEmpty) {
- return _placeholder();
+ return _placeholder(context);
  }
  return ClipRRect(
  borderRadius: BorderRadius.circular(radius),
@@ -28,13 +27,13 @@ class CoverArt extends StatelessWidget {
  width: size,
  height: size,
  fit: BoxFit.cover,
- placeholder: (_, __) => _placeholder(),
- errorWidget: (_, __, ___) => _placeholder(),
+ placeholder: (_, __) => _placeholder(context),
+ errorWidget: (_, __, ___) => _placeholder(context),
  ),
  );
  }
 
- Widget _placeholder() => Container(
+ Widget _placeholder(BuildContext context) => Container(
  width: size,
  height: size,
  decoration: BoxDecoration(
@@ -111,7 +110,6 @@ class MiniPlayer extends StatelessWidget {
  final state = context.watch<AppState>().player;
  final song = state?.currentSong;
  if (song == null) return const SizedBox.shrink();
- final b = Theme.of(context).brightness;
 
  return GestureDetector(
  onTap: () => Navigator.of(context).pushNamed('/nowplaying'),
@@ -181,7 +179,7 @@ class SectionHeader extends StatelessWidget {
  style: TextStyle(fontSize: 13, color: AppColors.secondaryAccent)),
  ),
  ],
- );
+ ),
  );
  }
 }

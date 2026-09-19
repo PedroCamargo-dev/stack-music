@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../core/app_state.dart';
-import '../core/models/subsonic_models.dart';
-import '../core/theme/app_theme.dart';
-import '../shared/widgets.dart';
+import '../../core/app_state.dart';
+import '../../core/models/subsonic_models.dart';
+import '../../core/theme/app_theme.dart';
+import '../../shared/widgets.dart';
 
 /// Home (refs 17.50.11 + 17.43.15): hero "Just for you", carrosséis
 /// Trending today / Top artists / New releases, com "Show all".

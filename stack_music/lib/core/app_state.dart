@@ -1,10 +1,9 @@
-import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../api/download_api_client.dart';
-import '../api/subsonic_client.dart';
-import '../player/player_handler.dart';
+import 'api/download_api_client.dart';
+import 'api/subsonic_client.dart';
+import 'player/player_handler.dart';
 
 /// Estado global: conexões (Subsonic + download API) e player.
 class AppState extends ChangeNotifier {

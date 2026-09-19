@@ -37,7 +37,7 @@ class SubsonicSong {
   final int? year;
   final String? genre;
   final int? playCount;
-  final bool starred;
+  bool starred;
 
   SubsonicSong({
     required this.id,
@@ -88,7 +88,7 @@ class SubsonicAlbum {
   final int duration;
   final int? year;
   final String? genre;
-  final bool starred;
+  bool starred;
 
   SubsonicAlbum({
     required this.id,

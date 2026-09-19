@@ -76,7 +76,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
  const SizedBox(height: 4),
  Text(
  '${album.songCount} songs · ${album.year ?? ''}${album.genre != null ? ' · ${album.genre}' : ''}',
- style: const TextStyle(fontSize: 12, letterSpacing: 1.2, color: textS)),
+ style: TextStyle(fontSize: 12, letterSpacing: 1.2, color: textS)),
  ])),
  ]),
  ),

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/app_state.dart';
+import 'core/models/subsonic_models.dart';
 import 'core/theme/app_theme.dart';
 import 'features/album/album_screen.dart';
 import 'features/artist/artist_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/library/library_screen.dart';
+import 'features/login/login_screen.dart';
 import 'features/player/now_playing_screen.dart';
 import 'features/playlist/playlist_screen.dart';
 import 'features/search/search_screen.dart';
@@ -36,19 +38,23 @@ class StackMusicApp extends StatelessWidget {
             initialRoute: '/',
             routes: {
               '/': (_) => const RootShell(),
+              '/login': (_) => const LoginScreen(),
               '/nowplaying': (_) => const NowPlayingScreen(),
               '/settings': (_) => const SettingsScreen(),
-              '/album': (ctx) =>
-                  AlbumScreen(album: ctx.settings.arguments as dynamic),
-              '/artist': (ctx) =>
-                  ArtistScreen(artist: ctx.settings.arguments as dynamic),
-              '/playlist': (ctx) =>
-                  PlaylistScreen(playlist: ctx.settings.arguments as dynamic),
             },
             onGenerateRoute: (settings) {
-              if (settings.name == '/login') {
-                return MaterialPageRoute(
-                    builder: (_) => const LoginGate());
+              final args = settings.arguments;
+              switch (settings.name) {
+                case '/album':
+                  return MaterialPageRoute(
+                      builder: (_) => AlbumScreen(album: args as SubsonicAlbum));
+                case '/artist':
+                  return MaterialPageRoute(
+                      builder: (_) => ArtistScreen(artist: args as SubsonicArtist));
+                case '/playlist':
+                  return MaterialPageRoute(
+                      builder: (_) =>
+                          PlaylistScreen(playlist: args as SubsonicPlaylist));
               }
               return null;
             },
@@ -56,30 +62,6 @@ class StackMusicApp extends StatelessWidget {
         },
       ),
     );
-  }
-}
-
-/// Gate de login: enquanto não houver conexão salva, mostra a LoginScreen.
-class LoginGate extends StatelessWidget {
-  const LoginGate({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<AppState>(
-      builder: (context, app, _) {
-        return app.isConfigured ? const RootShell() : const _LoginProxy();
-      },
-    );
-  }
-}
-
-class _LoginProxy extends StatelessWidget {
-  const _LoginProxy();
-
-  @override
-  Widget build(BuildContext context) {
-    // Import tardio evita ciclo; tela real em features/login/login_screen.dart
-    return const LoginScreenHost();
   }
 }
 
