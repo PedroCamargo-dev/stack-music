@@ -20,6 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
  List<SubsonicAlbum> frequent = [];
  List<SubsonicArtist> artists = [];
  List<SubsonicSong> random = [];
+ List<SubsonicSong> nowPlayingList = [];
  bool loading = true;
  String? error;
 
@@ -38,12 +39,14 @@ class _HomeScreenState extends State<HomeScreen> {
  client.getAlbumList(type: 'frequent', size: 10),
  client.getArtists(),
  client.getRandomSongs(size: 10),
+ client.getNowPlaying(),
  ]);
  setState(() {
  newest = results[0] as List<SubsonicAlbum>;
  frequent = results[1] as List<SubsonicAlbum>;
  artists = results[2] as List<SubsonicArtist>;
  random = results[3] as List<SubsonicSong>;
+ nowPlayingList = results[4] as List<SubsonicSong>;
  loading = false;
  });
  } catch (e) {
@@ -174,6 +177,12 @@ class _HomeScreenState extends State<HomeScreen> {
  },
  ),
  ),
+ ],
+
+ // Tocando agora (getNowPlaying)
+ if (nowPlayingList.isNotEmpty) ...[
+  const SectionHeader(title: 'Tocando agora'),
+  ...nowPlayingList.take(5).map((s) => SongTile(song: s, queue: nowPlayingList)),
  ],
 
  // Picked for you — músicas aleatórias
