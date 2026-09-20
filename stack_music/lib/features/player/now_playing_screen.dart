@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:audio_service/audio_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,10 +11,14 @@ import '../../core/models/subsonic_models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets.dart';
 
-/// Full Player (refs 17.43.15, 17.48.19, 17.48.51): gradiente índigo,
-/// artwork dominante com hero, tap no artista -> Artist Detail,
-/// like/repeat/shuffle, progresso, letras via swipe-up, fila (QueueSheet).
-/// Sem acoes fake: download removido ate existir implementacao real.
+/// Full Player — RECONSTRUÇÃO VISUAL:
+/// - background imersivo: capa desfocada + overlay escuro (tokens preservados);
+/// - artwork grande (~82% da largura), centralizada, com sombra;
+/// - metadata à esquerda (título grande, artista clicável) + like;
+/// - progress com seek + tempos;
+/// - PLAY dominante (1.6x) entre previous/next; shuffle/repeat nas pontas;
+/// - ações inferiores reais: Fila e Letras (quando existirem);
+/// - swipe-down fecha; swipe-up abre letras.
 class NowPlayingScreen extends StatefulWidget {
  const NowPlayingScreen({super.key});
 
@@ -38,6 +45,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  void _openQueue() {
  showModalBottomSheet<void>(
  context: context,
+ isScrollControlled: true,
  builder: (_) => const QueueSheet(),
  );
  }
@@ -52,28 +60,40 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  }
  if (_lyrics == null) _loadLyrics(song);
 
+ final coverUrl = app.subsonic?.coverArtUrl(song.coverArt, size: 600) ?? '';
+ final w = MediaQuery.of(context).size.width;
+
  return Scaffold(
- body: Container(
- decoration: const BoxDecoration(
- gradient: LinearGradient(
- begin: Alignment.topCenter,
- end: Alignment.bottomCenter,
- colors: [
- AppColors.playerGradientStart,
- AppColors.playerGradientEnd,
- ],
+ body: Stack(
+ fit: StackFit.expand,
+ children: [
+ // BACKGROUND imersivo: capa desfocada + overlay escuro
+ if (coverUrl.isNotEmpty)
+ ImageFiltered(
+ imageFilter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+ child: CachedNetworkImage(
+ imageUrl: coverUrl,
+ fit: BoxFit.cover,
+ width: double.infinity,
+ height: double.infinity,
+ errorWidget: (_, __, ___) =>
+ Container(color: AppColors.playerGradientStart),
  ),
  ),
- child: SafeArea(
+ Container(color: Colors.black.withValues(alpha: 0.55)),
+ // CONTEÚDO
+ SafeArea(
  child: GestureDetector(
  onVerticalDragEnd: (d) {
- if ((d.primaryVelocity ?? 0) > 0) Navigator.of(context).pop();
+ if ((d.primaryVelocity ?? 0) > 0) {
+ Navigator.of(context).pop();
+ }
  if ((d.primaryVelocity ?? 0) < 0 && _lyrics != null) {
  setState(() => _lyricsOpen = true);
  }
  },
  child: Column(children: [
- // Topo: voltar + hint letras + fila (ref 17.43.15)
+ // TOPO: fechar + título + queue
  Row(children: [
  IconButton(
  icon: const Icon(Icons.keyboard_arrow_down,
@@ -82,12 +102,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  ),
  Expanded(
  child: Text(
- _lyricsOpen ? 'LETRAS' : 'SWIPE UP FOR LYRICS',
+ 'Now Playing',
  textAlign: TextAlign.center,
- style: const TextStyle(
- fontSize: 11,
+ style: TextStyle(
+ fontSize: 12,
  letterSpacing: 1.5,
- color: Colors.white70),
+ color: Colors.white.withValues(alpha: 0.8)),
  ),
  ),
  IconButton(
@@ -98,47 +118,58 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  ]),
  Expanded(
  child: _lyricsOpen && _lyrics != null
- ? ListView(
- padding: const EdgeInsets.all(24),
- children: [
- Text(_lyrics!.title,
- textAlign: TextAlign.center,
- style: const TextStyle(
- fontSize: 18,
- fontWeight: FontWeight.w700,
- color: Colors.white)),
- const SizedBox(height: 16),
- Text(_lyrics!.text,
- style: const TextStyle(
- fontSize: 15,
- height: 1.6,
- color: Colors.white70)),
- ],
- )
+ ? _LyricsView(
+ lyrics: _lyrics!,
+ onClose: () => setState(() => _lyricsOpen = false))
  : Center(
  child: Column(
  mainAxisAlignment: MainAxisAlignment.center,
  children: [
+ // ARTWORK ~82% da largura com sombra
  Hero(
  tag: 'cover-${song.id}',
+ child: Container(
+ width: w * 0.82,
+ height: w * 0.82,
+ decoration: BoxDecoration(
+ borderRadius: BorderRadius.circular(20),
+ boxShadow: [
+ BoxShadow(
+ color: Colors.black.withValues(alpha: 0.5),
+ blurRadius: 40,
+ offset: const Offset(0, 16),
+ ),
+ ],
+ ),
  child: CoverArt(
  coverArtId: song.coverArt,
- size: 280,
- radius: 24)),
- const SizedBox(height: 32),
+ size: w * 0.82,
+ radius: 20),
+ ),
+ ),
+ const SizedBox(height: 36),
+ // METADATA à esquerda + like
+ Padding(
+ padding: const EdgeInsets.symmetric(horizontal: 28),
+ child: Row(children: [
+ Expanded(
+ child: Column(
+ crossAxisAlignment: CrossAxisAlignment.start,
+ children: [
  Text(song.title,
- textAlign: TextAlign.center,
+ maxLines: 2,
+ overflow: TextOverflow.ellipsis,
  style: const TextStyle(
  fontSize: 22,
  fontWeight: FontWeight.w700,
  color: Colors.white)),
  const SizedBox(height: 4),
- // Tap no artista -> Artist Detail (sem dado fake)
  GestureDetector(
  onTap: song.artistId.isNotEmpty
  ? () async {
- final artist =
- await app.subsonic!.getArtist(song.artistId);
+ final artist = await app
+ .subsonic!
+ .getArtist(song.artistId);
  if (context.mounted) {
  Navigator.of(context)
  .pushNamed('/artist', arguments: artist);
@@ -153,13 +184,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  ],
  ),
  ),
- ),
- // Like (unica acao secundaria real)
- Row(mainAxisAlignment: MainAxisAlignment.center, children: [
  IconButton(
  icon: Icon(
  song.starred ? Icons.favorite : Icons.favorite_border,
- color: Colors.white),
+ color:
+ song.starred ? AppColors.primary : Colors.white,
+ size: 26),
  onPressed: () async {
  final client = app.subsonic!;
  try {
@@ -171,68 +201,97 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  },
  ),
  ]),
- // Progresso + tempos
+ ),
+ ],
+ ),
+ ),
+ ),
+ // PROGRESSO com seek + tempos
  StreamBuilder<Duration>(
  stream: state!.player.positionStream,
- builder: (_, snap) {
+ builder: (context, snap) {
  final pos = snap.data ?? Duration.zero;
  final total = Duration(seconds: song.duration);
- return Column(children: [
+ final maxSec = total.inSeconds <= 0 ? 1 : total.inSeconds;
+ return Padding(
+ padding: const EdgeInsets.symmetric(horizontal: 24),
+ child: Column(children: [
  SliderTheme(
  data: SliderTheme.of(context).copyWith(
  trackHeight: 3,
+ activeTrackColor: AppColors.primary,
+ inactiveTrackColor:
+ Colors.white.withValues(alpha: 0.25),
+ thumbColor: AppColors.primary,
  overlayShape:
- const RoundSliderOverlayShape(overlayRadius: 12)),
+ const RoundSliderOverlayShape(overlayRadius: 14),
+ ),
  child: Slider(
- value: total.inSeconds == 0
- ? 0
- : pos.inSeconds
- .clamp(0, total.inSeconds)
- .toDouble(),
- max: total.inSeconds == 0 ? 1 : total.inSeconds.toDouble(),
- onChanged: (v) =>
- state.player.seek(Duration(seconds: v.toInt())),
+ value: pos.inSeconds.clamp(0, maxSec).toDouble(),
+ max: maxSec.toDouble(),
+ onChanged: (v) => state.player
+ .seek(Duration(seconds: v.toInt())),
  ),
  ),
  Padding(
- padding: const EdgeInsets.symmetric(horizontal: 24),
+ padding: const EdgeInsets.symmetric(horizontal: 8),
  child: Row(
  mainAxisAlignment: MainAxisAlignment.spaceBetween,
  children: [
  Text(_fmt(pos),
- style:
- const TextStyle(fontSize: 12, color: Colors.white70)),
+ style: TextStyle(
+ fontSize: 11,
+ color: Colors.white.withValues(alpha: 0.6))),
  Text(_fmt(total),
- style:
- const TextStyle(fontSize: 12, color: Colors.white70)),
- ])),
- ]);
+ style: TextStyle(
+ fontSize: 11,
+ color: Colors.white.withValues(alpha: 0.6))),
+ ]),
+ ),
+ ]),
+ );
  },
  ),
- // Controles principais (ref 17.43.15)
+ const SizedBox(height: 8),
+ // CONTROLES: shuffle | prev | PLAY (1.6x) | next | repeat
  Padding(
- padding: const EdgeInsets.only(bottom: 16),
+ padding: const EdgeInsets.only(bottom: 8),
  child: Row(
  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
  children: [
  IconButton(
- icon: const Icon(Icons.shuffle,
- color: Colors.white70, size: 26),
- onPressed: () => state.toggleShuffle()),
+ icon: Icon(Icons.shuffle,
+ color: state.isShuffled
+ ? AppColors.primary
+ : Colors.white.withValues(alpha: 0.7),
+ size: 24),
+ onPressed: () => state.toggleShuffle(),
+ ),
  IconButton(
  icon: const Icon(Icons.skip_previous,
- color: Colors.white, size: 40),
- onPressed: () => state.skipToPrevious()),
+ color: Colors.white, size: 36),
+ onPressed: () => state.skipToPrevious(),
+ ),
  Container(
- width: 84,
- height: 84,
- decoration: const BoxDecoration(
- color: AppColors.primary, shape: BoxShape.circle),
+ width: 76,
+ height: 76,
+ decoration: BoxDecoration(
+ color: AppColors.primary,
+ shape: BoxShape.circle,
+ boxShadow: [
+ BoxShadow(
+ color: AppColors.primary.withValues(alpha: 0.4),
+ blurRadius: 24,
+ spreadRadius: 2,
+ ),
+ ],
+ ),
  child: IconButton(
  iconSize: 40,
  color: Colors.black,
- icon: Icon(
- state.player.playing ? Icons.pause : Icons.play_arrow),
+ icon: Icon(state.player.playing
+ ? Icons.pause
+ : Icons.play_arrow),
  onPressed: () => state.player.playing
  ? state.pause()
  : state.play(),
@@ -240,17 +299,18 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  ),
  IconButton(
  icon: const Icon(Icons.skip_next,
- color: Colors.white, size: 40),
- onPressed: () => state.skipToNext()),
+ color: Colors.white, size: 36),
+ onPressed: () => state.skipToNext(),
+ ),
  StreamBuilder<AudioServiceRepeatMode>(
- stream: state.playbackState.map((s) => s.repeatMode).distinct(),
+ stream:
+ state.playbackState.map((s) => s.repeatMode).distinct(),
  builder: (_, snap) => IconButton(
  icon: Icon(Icons.repeat,
- color:
- snap.data == AudioServiceRepeatMode.none
- ? Colors.white70
+ color: snap.data == AudioServiceRepeatMode.none
+ ? Colors.white.withValues(alpha: 0.7)
  : AppColors.primary,
- size: 26),
+ size: 24),
  onPressed: () => state.setRepeatMode(
  snap.data == AudioServiceRepeatMode.none
  ? AudioServiceRepeatMode.all
@@ -259,9 +319,38 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  ],
  ),
  ),
+ // AÇÕES inferiores: Fila | Letras (somente reais)
+ Padding(
+ padding: const EdgeInsets.only(bottom: 16),
+ child: Row(
+ mainAxisAlignment: MainAxisAlignment.center,
+ children: [
+ TextButton.icon(
+ onPressed: _openQueue,
+ icon: const Icon(Icons.queue_music,
+ color: Colors.white70, size: 20),
+ label: const Text('Fila',
+ style:
+ TextStyle(color: Colors.white70, fontSize: 12)),
+ ),
+ if (_lyrics != null) ...[
+ const SizedBox(width: 24),
+ TextButton.icon(
+ onPressed: () => setState(() => _lyricsOpen = true),
+ icon: const Icon(Icons.lyrics,
+ color: Colors.white70, size: 20),
+ label: const Text('Letras',
+ style:
+ TextStyle(color: Colors.white70, fontSize: 12)),
+ ),
+ ],
+ ],
+ ),
+ ),
  ]),
  ),
  ),
+ ],
  ),
  );
  }
@@ -270,8 +359,45 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 }
 
+/// Vista de letras com botão de fechar.
+class _LyricsView extends StatelessWidget {
+ final Lyrics lyrics;
+ final VoidCallback onClose;
+ const _LyricsView({required this.lyrics, required this.onClose});
+
+ @override
+ Widget build(BuildContext context) {
+ return ListView(
+ padding: const EdgeInsets.all(28),
+ children: [
+ Row(children: [
+ IconButton(
+ icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+ onPressed: onClose,
+ ),
+ Expanded(
+ child: Text(lyrics.title,
+ textAlign: TextAlign.center,
+ style: const TextStyle(
+ fontSize: 16,
+ fontWeight: FontWeight.w700,
+ color: Colors.white)),
+ ),
+ const SizedBox(width: 48),
+ ]),
+ const SizedBox(height: 16),
+ Text(lyrics.text,
+ style: TextStyle(
+ fontSize: 16,
+ height: 1.7,
+ color: Colors.white.withValues(alpha: 0.85))),
+ ],
+ );
+ }
+}
+
 /// Fila global (queue) — bottom sheet consumindo o PlayerHandler.
-/// Acoes reais: tocar faixa, remover da fila, limpar fila.
+/// Ações reais: tocar faixa, remover da fila (removeAt), limpar.
 class QueueSheet extends StatelessWidget {
  const QueueSheet({super.key});
 
@@ -283,11 +409,25 @@ class QueueSheet extends StatelessWidget {
 
  return DraggableScrollableSheet(
  expand: false,
- initialChildSize: 0.6,
- maxChildSize: 0.9,
+ initialChildSize: 0.75,
+ maxChildSize: 0.92,
  builder: (context, scrollController) {
  final b = Theme.of(context).brightness;
- return Column(children: [
+ return Container(
+ decoration: BoxDecoration(
+ color: AppColors.surface(b),
+ borderRadius:
+ const BorderRadius.vertical(top: Radius.circular(20)),
+ ),
+ child: Column(children: [
+ const SizedBox(height: 8),
+ Container(
+ width: 40,
+ height: 4,
+ decoration: BoxDecoration(
+ color: AppColors.surface2(b),
+ borderRadius: BorderRadius.circular(2)),
+ ),
  Padding(
  padding: const EdgeInsets.all(16),
  child: Row(
@@ -309,7 +449,7 @@ class QueueSheet extends StatelessWidget {
  ),
  Expanded(
  child: queue.isEmpty
- ? EmptyState(message: 'Fila vazia')
+ ? const EmptyState(message: 'Fila vazia')
  : ListView.builder(
  controller: scrollController,
  itemCount: queue.length,
@@ -318,11 +458,13 @@ class QueueSheet extends StatelessWidget {
  final isCurrent = s.id == current?.id;
  return ListTile(
  dense: true,
- onTap: () => state?.playQueue(queue, startIndex: i),
+ onTap: () =>
+ state?.playQueue(queue, startIndex: i),
  leading: isCurrent
  ? const Icon(Icons.graphic_eq,
  color: AppColors.primary)
- : CoverArt(coverArtId: s.coverArt, size: 40, radius: 8),
+ : CoverArt(
+ coverArtId: s.coverArt, size: 44, radius: 8),
  title: Text(s.title,
  maxLines: 1,
  overflow: TextOverflow.ellipsis,
@@ -339,8 +481,7 @@ class QueueSheet extends StatelessWidget {
  color: AppColors.textSecondary(b))),
  trailing: IconButton(
  icon: Icon(Icons.close,
- size: 20,
- color: AppColors.textSecondary(b)),
+ size: 20, color: AppColors.textSecondary(b)),
  onPressed: () => state?.removeAt(i),
  ),
  );
@@ -348,6 +489,7 @@ class QueueSheet extends StatelessWidget {
  ),
  ),
  ],
+ ),
  );
  },
  );
