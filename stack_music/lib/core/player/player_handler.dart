@@ -143,6 +143,34 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  play();
  }
 
+ /// Remove uma faixa da fila pelo índice (QueueSheet). Se for a atual,
+/// avança para a próxima (ou para se for a última).
+ Future<void> removeAt(int index) async {
+ if (index < 0 || index >= _queue.length) return;
+ _queue.removeAt(index);
+ final source = player.audioSource;
+ if (source is ConcatenatingAudioSource) {
+ try {
+ await source.removeAt(index);
+ } catch (_) {
+ // índice fora da fonte: reconstroi a fila
+ await _rebuildSource();
+ }
+ }
+ if (_index >= _queue.length) {
+ _index = _queue.length - 1;
+ }
+ }
+
+ Future<void> _rebuildSource() async {
+ final src = ConcatenatingAudioSource(
+ children:
+ _queue.map((s) => AudioSource.uri(Uri.parse(client.streamUrl(s.id)))).toList());
+ await player.setAudioSource(src,
+ initialIndex: _index < 0 ? 0 : (_index < _queue.length ? _index : 0),
+ initialPosition: Duration.zero);
+ }
+
  /// Adiciona ao fim da fila atual.
  Future<void> addToQueue(SubsonicSong song) async {
  _queue.add(song);

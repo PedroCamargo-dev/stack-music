@@ -341,7 +341,7 @@ class QueueSheet extends StatelessWidget {
  icon: Icon(Icons.close,
  size: 20,
  color: AppColors.textSecondary(b)),
- onPressed: () {},
+ onPressed: () => state?.removeAt(i),
  ),
  );
  },
