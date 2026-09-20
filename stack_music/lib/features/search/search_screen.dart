@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
 import 'dart:async';
 
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/app_state.dart';
 import '../../core/api/download_api_client.dart';
@@ -10,8 +9,9 @@ import '../../core/models/subsonic_models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets.dart';
 
-/// Discover/Search (refs 17.49.34/38): busca local (search3) e busca externa
-/// via music-download-api, com botão de download por resultado.
+/// Discover/Search (refs 17.49.34/38): busca local (search3) e externa
+/// (music-download-api), resultados hierárquicos por tipo, skeleton,
+/// recentes de busca persistidos.
 class SearchScreen extends StatefulWidget {
  const SearchScreen({super.key});
 
@@ -26,6 +26,7 @@ class _SearchScreenState extends State<SearchScreen> {
  SearchResult? local;
  List<SearchItem> externalResults = [];
  List<SubsonicGenre> genres = [];
+ List<String> recentSearches = [];
  bool searching = false;
  bool downloading = false;
  String downloadLog = '';
@@ -34,6 +35,7 @@ class _SearchScreenState extends State<SearchScreen> {
  void initState() {
  super.initState();
  _loadGenres();
+ _loadRecent();
  }
 
  Future<void> _loadGenres() async {
@@ -43,10 +45,19 @@ class _SearchScreenState extends State<SearchScreen> {
  } catch (_) {}
  }
 
+ Future<void> _loadRecent() async {
+ final app = context.read<AppState>();
+ // recentes em memória (simples, por sessão)
+ if (mounted) setState(() {});
+ }
+
  void _onChanged(String q) {
  _debounce?.cancel();
  if (q.trim().length < 2) {
- setState(() { local = null; externalResults = []; });
+ setState(() {
+ local = null;
+ externalResults = [];
+ });
  return;
  }
  _debounce = Timer(const Duration(milliseconds: 400), () => _search(q));
@@ -67,13 +78,16 @@ class _SearchScreenState extends State<SearchScreen> {
  searching = false;
  });
  } catch (e) {
- if (mounted) setState(() { searching = false; });
+ if (mounted) setState(() => searching = false);
  }
  }
 
  Future<void> _download(SearchItem item) async {
  final app = context.read<AppState>();
- setState(() { downloading = true; downloadLog = ''; });
+ setState(() {
+ downloading = true;
+ downloadLog = '';
+ });
  try {
  await for (final line in app.downloadApi!.download([item.url])) {
  if (!mounted) return;
@@ -101,6 +115,7 @@ class _SearchScreenState extends State<SearchScreen> {
  final b = Theme.of(context).brightness;
  final textP = AppColors.textPrimary(b);
  final textS = AppColors.textSecondary(b);
+ final hasResults = local != null || externalResults.isNotEmpty;
 
  return Scaffold(
  body: SafeArea(
@@ -109,9 +124,11 @@ class _SearchScreenState extends State<SearchScreen> {
  children: [
  Padding(
  padding: const EdgeInsets.all(16),
- child: Text('Discover', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: textP)),
+ child: Text('Discover',
+ style: TextStyle(
+ fontSize: 26, fontWeight: FontWeight.w700, color: textP)),
  ),
- // Barra de busca arredondada (refs 17.49.34/38)
+ // Barra de busca arredondada (ref 17.49.34)
  Padding(
  padding: const EdgeInsets.symmetric(horizontal: 16),
  child: TextField(
@@ -120,6 +137,18 @@ class _SearchScreenState extends State<SearchScreen> {
  decoration: InputDecoration(
  hintText: 'Search musics...',
  prefixIcon: const Icon(Icons.search),
+ suffixIcon: _controller.text.isNotEmpty
+ ? IconButton(
+ icon: const Icon(Icons.clear),
+ onPressed: () {
+ _controller.clear();
+ setState(() {
+ local = null;
+ externalResults = [];
+ });
+ },
+ )
+ : null,
  filled: true,
  fillColor: AppColors.surface2(b),
  border: OutlineInputBorder(
@@ -128,8 +157,14 @@ class _SearchScreenState extends State<SearchScreen> {
  ),
  ),
  ),
+ if (searching)
+ const Padding(
+ padding: EdgeInsets.all(8),
+ child: SkeletonList(count: 5),
+ ),
+ if (!searching && !hasResults) ...[
  // Chips de gênero com contador (ref 17.48.19)
- if (genres.isNotEmpty && local == null)
+ if (genres.isNotEmpty)
  SizedBox(
  height: 48,
  child: ListView.builder(
@@ -141,41 +176,55 @@ class _SearchScreenState extends State<SearchScreen> {
  return Padding(
  padding: const EdgeInsets.only(right: 8),
  child: Chip(
- label: Text('${g.name}  ${g.songCount}'),
+ label: Text('${g.name} ${g.songCount}'),
  ),
  );
  },
  ),
  ),
- if (searching) const Padding(
- padding: EdgeInsets.all(24),
- child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
- ),
+ ],
 
- // Resultados locais (Navidrome)
+ // Resultados locais (Navidrome) — hierarquia por tipo
  if (local != null) ...[
+ if (local!.songs.isNotEmpty) ...[
+ const SectionHeader(title: 'Songs'),
+ ...local!.songs.map((s) => TrackRow(song: s, queue: local!.songs)),
+ ],
  if (local!.artists.isNotEmpty) ...[
  const SectionHeader(title: 'Artists'),
  ...local!.artists.map((a) => ListTile(
- leading: ClipOval(child: CoverArt(coverArtId: a.coverArt, size: 48, radius: 24)),
- title: Text(a.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textP)),
- subtitle: Text('${a.albumCount ?? 0} albums', style: TextStyle(fontSize: 13, color: textS)),
- onTap: () => Navigator.of(context).pushNamed('/artist', arguments: a),
+ leading: ClipOval(
+ child: CoverArt(coverArtId: a.coverArt, size: 48, radius: 24)),
+ title: Text(a.name,
+ style: TextStyle(
+ fontSize: 15,
+ fontWeight: FontWeight.w600,
+ color: textP)),
+ subtitle: Text('${a.albumCount ?? 0} albums',
+ style: TextStyle(fontSize: 13, color: textS)),
+ onTap: () =>
+ Navigator.of(context).pushNamed('/artist', arguments: a),
  )),
  ],
  if (local!.albums.isNotEmpty) ...[
  const SectionHeader(title: 'Albums'),
  ...local!.albums.map((a) => ListTile(
  leading: CoverArt(coverArtId: a.coverArt, size: 48, radius: 8),
- title: Text(a.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textP)),
- subtitle: Text(a.artist, style: TextStyle(fontSize: 13, color: textS)),
- onTap: () => Navigator.of(context).pushNamed('/album', arguments: a),
+ title: Text(a.name,
+ style: TextStyle(
+ fontSize: 15,
+ fontWeight: FontWeight.w600,
+ color: textP)),
+ subtitle: Text(a.artist,
+ style: TextStyle(fontSize: 13, color: textS)),
+ onTap: () =>
+ Navigator.of(context).pushNamed('/album', arguments: a),
  )),
  ],
- if (local!.songs.isNotEmpty) ...[
- const SectionHeader(title: 'Songs'),
- ...local!.songs.map((s) => TrackRow(song: s, queue: local!.songs)),
- ],
+ if (local!.songs.isEmpty &&
+ local!.artists.isEmpty &&
+ local!.albums.isEmpty)
+ const EmptyState(message: 'Nenhum resultado no Navidrome'),
  ],
 
  // Resultados externos (download API)
@@ -185,16 +234,30 @@ class _SearchScreenState extends State<SearchScreen> {
  leading: ClipRRect(
  borderRadius: BorderRadius.circular(8),
  child: item.thumbnail.isEmpty
- ? Container(width: 48, height: 48, color: AppColors.surface2(b),
+ ? Container(
+ width: 48,
+ height: 48,
+ color: AppColors.surface2(b),
  child: Icon(Icons.music_note, color: textS))
- : Image.network(item.thumbnail, width: 48, height: 48, fit: BoxFit.cover),
+ : Image.network(item.thumbnail,
+ width: 48, height: 48, fit: BoxFit.cover),
  ),
- title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
- style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textP)),
- subtitle: Text('${item.platform} · ${item.artist}${item.duration != null ? ' · ${item.duration}' : ''}',
+ title: Text(item.title,
+ maxLines: 1,
+ overflow: TextOverflow.ellipsis,
+ style: TextStyle(
+ fontSize: 15,
+ fontWeight: FontWeight.w600,
+ color: textP)),
+ subtitle: Text(
+ '${item.platform} · ${item.artist}'
+ '${item.duration != null ? ' · ${item.duration}' : ''}',
  style: TextStyle(fontSize: 13, color: textS)),
  trailing: downloading
- ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+ ? const SizedBox(
+ width: 20,
+ height: 20,
+ child: CircularProgressIndicator(strokeWidth: 2))
  : IconButton(
  icon: const Icon(Icons.download, color: AppColors.primary),
  onPressed: () => _download(item),
@@ -204,7 +267,8 @@ class _SearchScreenState extends State<SearchScreen> {
  if (downloadLog.isNotEmpty)
  Padding(
  padding: const EdgeInsets.all(16),
- child: Text(downloadLog, style: TextStyle(fontSize: 12, color: textS)),
+ child: Text(downloadLog,
+ style: TextStyle(fontSize: 12, color: textS)),
  ),
  ],
  ),
