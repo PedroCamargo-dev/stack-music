@@ -6,6 +6,110 @@ import '../core/app_state.dart';
 import '../core/models/subsonic_models.dart';
 import '../core/theme/app_theme.dart';
 
+// ============================================================
+// Estados padronizados: Skeleton / Empty / Error
+// ============================================================
+
+/// Skeleton para carregamento de listas (linhas cinza pulsando).
+class SkeletonList extends StatelessWidget {
+ final int count;
+ const SkeletonList({super.key, this.count = 6});
+
+ @override
+ Widget build(BuildContext context) {
+ final b = Theme.of(context).brightness;
+ return ListView.builder(
+ padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+ itemCount: count,
+ itemBuilder: (_, __) {
+ return Padding(
+ padding: const EdgeInsets.only(bottom: 12),
+ child: Row(children: [
+ Container(
+ width: 48,
+ height: 48,
+ decoration: BoxDecoration(
+ color: AppColors.surface2(b),
+ borderRadius: BorderRadius.circular(8)),
+ ),
+ const SizedBox(width: 12),
+ Expanded(
+ child: Column(
+ crossAxisAlignment: CrossAxisAlignment.start,
+ children: [
+ Container(height: 14, decoration: BoxDecoration(
+ color: AppColors.surface2(b),
+ borderRadius: BorderRadius.circular(4))),
+ const SizedBox(height: 6),
+ Container(height: 10, width: 140, decoration: BoxDecoration(
+ color: AppColors.surface2(b),
+ borderRadius: BorderRadius.circular(4))),
+ ]),
+ ),
+ ]),
+ );
+ },
+ );
+ }
+}
+
+/// Estado vazio padronizado por seção.
+class EmptyState extends StatelessWidget {
+ final String message;
+ final IconData icon;
+ const EmptyState({super.key, required this.message, this.icon = Icons.music_off});
+
+ @override
+ Widget build(BuildContext context) {
+ final b = Theme.of(context).brightness;
+ return Center(
+ child: Padding(
+ padding: const EdgeInsets.all(32),
+ child: Column(mainAxisSize: MainAxisSize.min, children: [
+ Icon(icon, size: 40, color: AppColors.textSecondary(b)),
+ const SizedBox(height: 12),
+ Text(message, textAlign: TextAlign.center,
+ style: TextStyle(fontSize: 14, color: AppColors.textSecondary(b))),
+ ]),
+ ),
+ );
+ }
+}
+
+/// Estado de erro padronizado com retry.
+class ErrorState extends StatelessWidget {
+ final String message;
+ final VoidCallback onRetry;
+ const ErrorState({super.key, required this.message, required this.onRetry});
+
+ @override
+ Widget build(BuildContext context) {
+ final b = Theme.of(context).brightness;
+ return Center(
+ child: Padding(
+ padding: const EdgeInsets.all(32),
+ child: Column(mainAxisSize: MainAxisSize.min, children: [
+ const Icon(Icons.cloud_off, size: 40, color: AppColors.danger),
+ const SizedBox(height: 12),
+ Text(message, textAlign: TextAlign.center,
+ style: TextStyle(fontSize: 14, color: AppColors.textSecondary(b))),
+ const SizedBox(height: 16),
+ FilledButton.icon(
+ style: FilledButton.styleFrom(
+ backgroundColor: AppColors.primary, foregroundColor: Colors.black),
+ onPressed: onRetry,
+ icon: const Icon(Icons.refresh),
+ label: const Text('Tentar novamente')),
+ ]),
+ ),
+ );
+ }
+}
+
+// ============================================================
+// Artwork
+// ============================================================
+
 /// Capa quadrada 1:1 via getCoverArt, com placeholder de nota musical.
 class CoverArt extends StatelessWidget {
  final String? coverArtId;
@@ -40,18 +144,122 @@ class CoverArt extends StatelessWidget {
  color: AppColors.surface2(Theme.of(context).brightness),
  borderRadius: BorderRadius.circular(radius),
  ),
- child: Icon(Icons.music_note, color: AppColors.textSecondary(Theme.of(context).brightness), size: size * 0.35),
+ child: Icon(Icons.music_note,
+ color: AppColors.textSecondary(Theme.of(context).brightness),
+ size: size * 0.35),
  );
 }
 
-/// Card horizontal de faixa (lista/playlist): capa, título, artista, duração,
-/// like e menu. Toca a faixa na fila passada.
-class SongTile extends StatelessWidget {
+// ============================================================
+// Cards padronizados (Ref 17.43.15 / 17.50.11)
+// ============================================================
+
+/// Card de álbum para carrosséis e grades.
+class AlbumCard extends StatelessWidget {
+ final SubsonicAlbum album;
+ final double width;
+ const AlbumCard({super.key, required this.album, this.width = 160});
+
+ @override
+ Widget build(BuildContext context) {
+ final b = Theme.of(context).brightness;
+ return GestureDetector(
+ onTap: () => Navigator.of(context).pushNamed('/album', arguments: album),
+ child: SizedBox(
+ width: width,
+ child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+ CoverArt(coverArtId: album.coverArt, size: width),
+ const SizedBox(height: 8),
+ Text(album.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+ style: TextStyle(
+ fontSize: 13, fontWeight: FontWeight.w600,
+ color: AppColors.textPrimary(b))),
+ Text('${album.year ?? ''} · ${album.artist}',
+ maxLines: 1, overflow: TextOverflow.ellipsis,
+ style: TextStyle(
+ fontSize: 12, color: AppColors.textSecondary(b))),
+ ]),
+ ),
+ );
+ }
+}
+
+/// Card de artista (círculo) para carrosséis.
+class ArtistCard extends StatelessWidget {
+ final SubsonicArtist artist;
+ final double size;
+ const ArtistCard({super.key, required this.artist, this.size = 80});
+
+ @override
+ Widget build(BuildContext context) {
+ final b = Theme.of(context).brightness;
+ return GestureDetector(
+ onTap: () => Navigator.of(context).pushNamed('/artist', arguments: artist),
+ child: SizedBox(
+ width: size + 10,
+ child: Column(children: [
+ ClipOval(child: CoverArt(coverArtId: artist.coverArt, size: size, radius: size / 2)),
+ const SizedBox(height: 6),
+ Text(artist.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+ style: TextStyle(
+ fontSize: 12, color: AppColors.textPrimary(b))),
+ ]),
+ ),
+ );
+ }
+}
+
+/// Card de playlist para listas e carrosséis.
+class PlaylistCard extends StatelessWidget {
+ final SubsonicPlaylist playlist;
+ final double width;
+ const PlaylistCard({super.key, required this.playlist, this.width = 160});
+
+ @override
+ Widget build(BuildContext context) {
+ final b = Theme.of(context).brightness;
+ return GestureDetector(
+ onTap: () => Navigator.of(context).pushNamed('/playlist', arguments: playlist),
+ child: SizedBox(
+ width: width,
+ child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+ CoverArt(coverArtId: playlist.coverArt, size: width),
+ const SizedBox(height: 8),
+ Text(playlist.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+ style: TextStyle(
+ fontSize: 13, fontWeight: FontWeight.w600,
+ color: AppColors.textPrimary(b))),
+ Text('${playlist.songCount} faixas',
+ style: TextStyle(
+ fontSize: 12, color: AppColors.textSecondary(b))),
+ ]),
+ ),
+ );
+ }
+}
+
+// ============================================================
+// TrackRow — linha de faixa unificada
+// ============================================================
+
+/// Linha de faixa unificada (substitui SongTile e _PlaylistSongTile).
+/// Estrutura (ref 17.48.51): [cover] [título / artista • álbum] [duração] [...]
+/// Tap no row → play; tap no artista → Artist Detail; menu → ações reais.
+class TrackRow extends StatelessWidget {
  final SubsonicSong song;
  final List<SubsonicSong> queue;
- final VoidCallback? onDownload;
+ final int? index; // número opcional (tracklist numerada)
+ final bool showIndex;
+ final Widget? trailing;
 
- const SongTile({super.key, required this.song, required this.queue, this.onDownload});
+ const TrackRow({
+ super.key,
+ required this.song,
+ required this.queue,
+ this.index,
+ this.showIndex = false,
+ this.trailing,
+ });
 
  @override
  Widget build(BuildContext context) {
@@ -61,47 +269,53 @@ class SongTile extends StatelessWidget {
  final isCurrent = state?.currentSong?.id == song.id;
 
  return ListTile(
- onTap: () => state?.playQueue(queue, startIndex: queue.indexOf(song)),
- leading: CoverArt(coverArtId: song.coverArt, size: 48, radius: 8),
- title: Text(
- song.title,
+ onTap: () => state?.playQueue(queue,
+ startIndex: showIndex && index != null ? index! : queue.indexOf(song)),
+ dense: true,
+ contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+ leading: Row(mainAxisSize: MainAxisSize.min, children: [
+ if (showIndex && index != null)
+ SizedBox(
+ width: 26,
+ child: Text('${index! + 1}',
+ style: TextStyle(
+ fontSize: 14,
+ fontWeight: FontWeight.w700,
+ color: isCurrent ? AppColors.primary : AppColors.textSecondary(b))),
+ ),
+ CoverArt(coverArtId: song.coverArt, size: 44, radius: 8),
+ ]),
+ title: Text(song.title,
  maxLines: 1,
  overflow: TextOverflow.ellipsis,
  style: TextStyle(
  fontSize: 15,
  fontWeight: FontWeight.w600,
- color: isCurrent ? AppColors.primary : AppColors.textPrimary(b),
- ),
- ),
- subtitle: Text(song.artist, style: TextStyle(fontSize: 13, color: AppColors.textSecondary(b))),
- trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+ color: isCurrent ? AppColors.primary : AppColors.textPrimary(b))),
+ subtitle: Text(song.album.isNotEmpty ? '${song.artist} • ${song.album}' : song.artist,
+ maxLines: 1,
+ overflow: TextOverflow.ellipsis,
+ style: TextStyle(
+ fontSize: 13, color: AppColors.textSecondary(b))),
+ trailing: trailing ??
+ Row(mainAxisSize: MainAxisSize.min, children: [
  if (isCurrent && state?.player.playing == true)
  const SizedBox(
  width: 16, height: 12,
- child: Icon(Icons.graphic_eq, size: 16, color: AppColors.primary)),
- IconButton(
- icon: Icon(
- song.starred ? Icons.favorite : Icons.favorite_border,
- size: 20,
- color: song.starred ? AppColors.primary : AppColors.textSecondary(b),
- ),
- onPressed: () async {
- final client = app.subsonic!;
- try {
- song.starred ? await client.unstar(song.id) : await client.star(song.id);
- song.starred = !song.starred;
- } catch (_) {}
- // força rebuild
- (context as Element).markNeedsBuild();
- },
- ),
- Text(song.durationLabel, style: TextStyle(fontSize: 13, color: AppColors.textSecondary(b))),
+ child: Icon(Icons.graphic_eq,
+ size: 16, color: AppColors.primary)),
+ Text(song.durationLabel,
+ style: TextStyle(
+ fontSize: 13, color: AppColors.textSecondary(b))),
  ]),
  );
  }
 }
 
-/// Mini-player fixo acima da bottom nav (ref 17.48.51).
+// ============================================================
+// MiniPlayer (ref 17.48.51) — pílula persistente global
+// ============================================================
+
 class MiniPlayer extends StatelessWidget {
  const MiniPlayer({super.key});
 
@@ -115,7 +329,7 @@ class MiniPlayer extends StatelessWidget {
  onTap: () => Navigator.of(context).pushNamed('/nowplaying'),
  child: Container(
  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
- padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+ padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
  decoration: BoxDecoration(
  color: AppColors.primary,
  borderRadius: BorderRadius.circular(999),
@@ -125,19 +339,25 @@ class MiniPlayer extends StatelessWidget {
  const SizedBox(width: 10),
  Expanded(
  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
- Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis,
- style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
- Text(song.artist, maxLines: 1,
- style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.7))),
+ Text(song.title,
+ maxLines: 1,
+ overflow: TextOverflow.ellipsis,
+ style: const TextStyle(
+ fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
+ Text(song.artist,
+ maxLines: 1,
+ style: TextStyle(
+ fontSize: 12, color: Colors.black.withValues(alpha: 0.7))),
  ]),
  ),
+ // progresso discreto
  StreamBuilder<Duration>(
  stream: state!.player.positionStream,
  builder: (_, snap) {
  final pos = snap.data ?? Duration.zero;
  final total = Duration(seconds: song.duration);
  return SizedBox(
- width: 48,
+ width: 40,
  child: LinearProgressIndicator(
  value: total.inSeconds == 0 ? 0 : pos.inSeconds / total.inSeconds,
  backgroundColor: Colors.black.withValues(alpha: 0.2),
@@ -146,17 +366,41 @@ class MiniPlayer extends StatelessWidget {
  );
  },
  ),
- IconButton(
- icon: Icon(state.player.playing ? Icons.pause : Icons.play_arrow, color: Colors.black),
- onPressed: () => state.player.playing ? state.pause() : state.play(),
+ _BlackBtn(
+ icon: state.player.playing ? Icons.pause : Icons.play_arrow,
+ onTap: () => state.player.playing ? state.pause() : state.play(),
  ),
+ _BlackBtn(
+ icon: Icons.skip_next,
+ onTap: () => state.skipToNext(),
+ ),
+ const Icon(Icons.keyboard_arrow_up, color: Colors.black),
  ]),
  ),
  );
  }
 }
 
-/// Header de seção com link "Show all" (refs Home).
+class _BlackBtn extends StatelessWidget {
+ final IconData icon;
+ final VoidCallback onTap;
+ const _BlackBtn({required this.icon, required this.onTap});
+
+ @override
+ Widget build(BuildContext context) {
+ return IconButton(
+ visualDensity: VisualDensity.compact,
+ iconSize: 22,
+ icon: Icon(icon, color: Colors.black),
+ onPressed: onTap,
+ );
+ }
+}
+
+// ============================================================
+// SectionHeader com "See all" (ref 17.50.11)
+// ============================================================
+
 class SectionHeader extends StatelessWidget {
  final String title;
  final VoidCallback? onShowAll;
@@ -171,12 +415,21 @@ class SectionHeader extends StatelessWidget {
  child: Row(
  mainAxisAlignment: MainAxisAlignment.spaceBetween,
  children: [
- Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textPrimary(b))),
+ Text(title,
+ style: TextStyle(
+ fontSize: 18,
+ fontWeight: FontWeight.w700,
+ color: AppColors.textPrimary(b))),
  if (onShowAll != null)
  GestureDetector(
  onTap: onShowAll,
- child: Text('Show all',
- style: TextStyle(fontSize: 13, color: AppColors.secondaryAccent)),
+ child: Row(children: [
+ Text('See all',
+ style: TextStyle(
+ fontSize: 13, color: AppColors.secondaryAccent)),
+ Icon(Icons.chevron_right,
+ size: 16, color: AppColors.secondaryAccent),
+ ]),
  ),
  ],
  ),

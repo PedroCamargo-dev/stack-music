@@ -174,7 +174,7 @@ class _SearchScreenState extends State<SearchScreen> {
  ],
  if (local!.songs.isNotEmpty) ...[
  const SectionHeader(title: 'Songs'),
- ...local!.songs.map((s) => SongTile(song: s, queue: local!.songs)),
+ ...local!.songs.map((s) => TrackRow(song: s, queue: local!.songs)),
  ],
  ],
 

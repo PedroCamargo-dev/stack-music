@@ -186,13 +186,13 @@ class _HomeScreenState extends State<HomeScreen> {
  // Tocando agora (getNowPlaying)
  if (nowPlayingList.isNotEmpty) ...[
   const SectionHeader(title: 'Tocando agora'),
-  ...nowPlayingList.take(5).map((s) => SongTile(song: s, queue: nowPlayingList)),
+  ...nowPlayingList.take(5).map((s) => TrackRow(song: s, queue: nowPlayingList)),
  ],
 
  // Picked for you — músicas aleatórias
  if (random.isNotEmpty) ...[
  const SectionHeader(title: 'Picked for you'),
- ...random.take(5).map((s) => SongTile(song: s, queue: random)),
+ ...random.take(5).map((s) => TrackRow(song: s, queue: random)),
  ],
  ],
  ),

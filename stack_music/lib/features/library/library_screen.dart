@@ -147,7 +147,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         if (starred.isEmpty) return _empty('Nenhum favorito ainda');
         return ListView(
           padding: const EdgeInsets.only(top: 8),
-          children: [for (final s in starred) SongTile(song: s, queue: starred)],
+          children: [for (final s in starred) TrackRow(song: s, queue: starred)],
         );
       case _LibTab.artists:
         return ListView.builder(
