@@ -134,6 +134,15 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  Future<void> toggleShuffle() => setShuffleMode(
  _shuffle ? AudioServiceShuffleMode.none : AudioServiceShuffleMode.all);
 
+ /// Toca uma URL arbitrária (ex.: stream de rádio internet) fora da fila.
+ Future<void> playUrl(String url, {String title = ''}) async {
+ _queue.clear();
+ _index = -1;
+ mediaItem.add(MediaItem(id: url, title: title.isEmpty ? 'Rádio' : title));
+ await player.setUrl(url);
+ play();
+ }
+
  /// Adiciona ao fim da fila atual.
  Future<void> addToQueue(SubsonicSong song) async {
  _queue.add(song);
