@@ -45,10 +45,8 @@ class _SearchScreenState extends State<SearchScreen> {
  } catch (_) {}
  }
 
- Future<void> _loadRecent() async {
- final app = context.read<AppState>();
+ void _loadRecent() {
  // recentes em memória (simples, por sessão)
- if (mounted) setState(() {});
  }
 
  void _onChanged(String q) {
