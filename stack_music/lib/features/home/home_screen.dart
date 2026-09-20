@@ -4,198 +4,195 @@ import 'package:provider/provider.dart';
 import '../../core/app_state.dart';
 import '../../core/models/subsonic_models.dart';
 import '../../core/theme/app_theme.dart';
-import '../../shared/fade_slide_in.dart';
 import '../../shared/widgets.dart';
 
-/// Home (refs 17.50.11 + 17.43.15): hero "Just for you", carrosséis
-/// Trending today / Top artists / New releases, com "Show all".
+/// Home (refs 17.50.11 + 17.43.15): header com saudação + avatar,
+/// módulos que somem quando vazios, carrosséis padronizados, TrackRow.
 class HomeScreen extends StatefulWidget {
- const HomeScreen({super.key});
+  const HomeScreen({super.key});
 
- @override
- State<HomeScreen> createState() => _HomeScreenState();
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
- List<SubsonicAlbum> newest = [];
- List<SubsonicAlbum> frequent = [];
- List<SubsonicArtist> artists = [];
- List<SubsonicSong> random = [];
- List<SubsonicSong> nowPlayingList = [];
- bool loading = true;
- String? error;
+  List<SubsonicAlbum> newest = [];
+  List<SubsonicAlbum> frequent = [];
+  List<SubsonicArtist> artists = [];
+  List<SubsonicSong> random = [];
+  List<SubsonicSong> nowPlayingList = [];
+  bool loading = true;
+  String? error;
 
- @override
- void initState() {
- super.initState();
- _load();
- }
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
 
- Future<void> _load() async {
- setState(() { loading = true; error = null; });
- final client = context.read<AppState>().subsonic!;
- try {
- final results = await Future.wait([
- client.getAlbumList(type: 'newest', size: 10),
- client.getAlbumList(type: 'frequent', size: 10),
- client.getArtists(),
- client.getRandomSongs(size: 10),
- client.getNowPlaying(),
- ]);
- setState(() {
- newest = results[0] as List<SubsonicAlbum>;
- frequent = results[1] as List<SubsonicAlbum>;
- artists = results[2] as List<SubsonicArtist>;
- random = results[3] as List<SubsonicSong>;
- nowPlayingList = results[4] as List<SubsonicSong>;
- loading = false;
- });
- } catch (e) {
- setState(() { loading = false; error = e.toString(); });
- }
- }
+  Future<void> _load() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    final client = context.read<AppState>().subsonic!;
+    try {
+      final results = await Future.wait([
+        client.getAlbumList(type: 'newest', size: 10),
+        client.getAlbumList(type: 'frequent', size: 10),
+        client.getArtists(),
+        client.getRandomSongs(size: 10),
+        client.getNowPlaying(),
+      ]);
+      setState(() {
+        newest = results[0] as List<SubsonicAlbum>;
+        frequent = results[1] as List<SubsonicAlbum>;
+        artists = results[2] as List<SubsonicArtist>;
+        random = results[3] as List<SubsonicSong>;
+        nowPlayingList = results[4] as List<SubsonicSong>;
+        loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        loading = false;
+        error = e.toString();
+      });
+    }
+  }
 
- @override
- Widget build(BuildContext context) {
- final b = Theme.of(context).brightness;
- final textP = AppColors.textPrimary(b);
+  String get _greeting {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Bom dia';
+    if (h < 18) return 'Boa tarde';
+    return 'Boa noite';
+  }
 
- if (loading) {
- return const Center(child: CircularProgressIndicator(color: AppColors.primary));
- }
- if (error != null) {
- return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
- const Icon(Icons.cloud_off, size: 48, color: AppColors.danger),
- const SizedBox(height: 8),
- Text('Erro ao carregar: $error', textAlign: TextAlign.center),
- TextButton(onPressed: _load, child: const Text('Tentar novamente')),
- ]));
- }
+  @override
+  Widget build(BuildContext context) {
+    final b = Theme.of(context).brightness;
+    final textP = AppColors.textPrimary(b);
+    final user = context.watch<AppState>().subsonic?.username ?? '';
 
- return RefreshIndicator(
- color: AppColors.primary,
- onRefresh: _load,
- child: ListView(
- padding: const EdgeInsets.only(bottom: 24),
- children: [
- // Header
- Padding(
- padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
- child: Text('Home', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: textP)),
- ),
+    if (loading) {
+      return const Scaffold(body: SkeletonList(count: 8));
+    }
+    if (error != null) {
+      return Scaffold(
+        body: ErrorState(message: 'Erro ao carregar: $error', onRetry: _load),
+      );
+    }
 
- // Just for you — hero (álbuns recentemente adicionados)
- if (newest.isNotEmpty) ...[
- const SectionHeader(title: 'Just for you'),
- SizedBox(
- height: 210,
- child: ListView.builder(
- scrollDirection: Axis.horizontal,
- padding: const EdgeInsets.symmetric(horizontal: 16),
- itemCount: newest.length,
- itemBuilder: (_, i) {
- final album = newest[i];
- return FadeSlideIn(
- index: i,
- child: GestureDetector(
- onTap: () => Navigator.of(context).pushNamed('/album', arguments: album),
- child: Container(
- width: 170,
- margin: const EdgeInsets.only(right: 12),
- child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
- CoverArt(coverArtId: album.coverArt, size: 170),
- const SizedBox(height: 8),
- Text(album.name, maxLines: 1, overflow: TextOverflow.ellipsis,
- style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textP)),
- Text(album.artist, maxLines: 1,
- style: TextStyle(fontSize: 12, color: AppColors.textSecondary(b))),
- ]),
- ),
- ),
- );
- },
- ),
- ),
- ],
+    return Scaffold(
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _load,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 24),
+          children: [
+            // Header (ref 17.50.11): saudação + avatar de perfil
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 0),
+              child: Row(children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_greeting,
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary(b))),
+                      Text('Home',
+                          style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              color: textP)),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pushNamed('/settings'),
+                  child: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.primary,
+                    child: Text(
+                      user.isNotEmpty ? user[0].toUpperCase() : '?',
+                      style: const TextStyle(
+                          color: Colors.black, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ]),
+            ),
 
- // Trending today — mais tocados
- if (frequent.isNotEmpty) ...[
- const SectionHeader(title: 'Trending today'),
- SizedBox(
- height: 180,
- child: ListView.builder(
- scrollDirection: Axis.horizontal,
- padding: const EdgeInsets.symmetric(horizontal: 16),
- itemCount: frequent.length,
- itemBuilder: (_, i) {
- final album = frequent[i];
- return GestureDetector(
- onTap: () => Navigator.of(context).pushNamed('/album', arguments: album),
- child: Container(
- width: 140,
- margin: const EdgeInsets.only(right: 12),
- child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
- Stack(children: [
- CoverArt(coverArtId: album.coverArt, size: 140),
- ]),
- const SizedBox(height: 6),
- Text(album.name, maxLines: 1, overflow: TextOverflow.ellipsis,
- style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textP)),
- // linha colorida sob o nome (ref 17.50.11)
- Container(height: 3, width: 40, color: AppColors.primary),
- const SizedBox(height: 2),
- Text(album.artist, maxLines: 1,
- style: TextStyle(fontSize: 12, color: AppColors.textSecondary(b))),
- ]),
- ),
- );
- },
- ),
- ),
- ],
+            // Tocando agora (getNowPlaying) — some se vazia
+            if (nowPlayingList.isNotEmpty) ...[
+              const SectionHeader(title: 'Tocando agora'),
+              ...nowPlayingList
+                  .take(5)
+                  .map((s) => TrackRow(song: s, queue: nowPlayingList)),
+            ],
 
- // Top artists — círculos
- if (artists.isNotEmpty) ...[
- const SectionHeader(title: 'Top artists'),
- SizedBox(
- height: 130,
- child: ListView.builder(
- scrollDirection: Axis.horizontal,
- padding: const EdgeInsets.symmetric(horizontal: 16),
- itemCount: artists.length,
- itemBuilder: (_, i) {
- final artist = artists[i];
- return GestureDetector(
- onTap: () => Navigator.of(context).pushNamed('/artist', arguments: artist),
- child: Container(
- width: 90,
- margin: const EdgeInsets.only(right: 12),
- child: Column(children: [
- ClipOval(child: CoverArt(coverArtId: artist.coverArt, size: 80, radius: 40)),
- const SizedBox(height: 6),
- Text(artist.name, maxLines: 1, overflow: TextOverflow.ellipsis,
- style: TextStyle(fontSize: 12, color: textP)),
- ]),
- ),
- );
- },
- ),
- ),
- ],
+            // Just for you — hero (ref 17.43.15)
+            if (newest.isNotEmpty) ...[
+              const SectionHeader(title: 'Just for you'),
+              SizedBox(
+                height: 215,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: newest.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) => AlbumCard(album: newest[i], width: 170),
+                ),
+              ),
+            ],
 
- // Tocando agora (getNowPlaying)
- if (nowPlayingList.isNotEmpty) ...[
-  const SectionHeader(title: 'Tocando agora'),
-  ...nowPlayingList.take(5).map((s) => TrackRow(song: s, queue: nowPlayingList)),
- ],
+            // Trending today — mais tocados (ref 17.50.11)
+            if (frequent.isNotEmpty) ...[
+              const SectionHeader(title: 'Trending today'),
+              SizedBox(
+                height: 190,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: frequent.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) => AlbumCard(album: frequent[i], width: 140),
+                ),
+              ),
+            ],
 
- // Picked for you — músicas aleatórias
- if (random.isNotEmpty) ...[
- const SectionHeader(title: 'Picked for you'),
- ...random.take(5).map((s) => TrackRow(song: s, queue: random)),
- ],
- ],
- ),
- );
- }
+            // Top artists — círculos (ref 17.50.11)
+            if (artists.isNotEmpty) ...[
+              const SectionHeader(title: 'Top artists'),
+              SizedBox(
+                height: 120,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: artists.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) => ArtistCard(artist: artists[i], size: 76),
+                ),
+              ),
+            ],
+
+            // Picked for you — músicas aleatórias
+            if (random.isNotEmpty) ...[
+              const SectionHeader(title: 'Picked for you'),
+              ...random.take(5).map((s) => TrackRow(song: s, queue: random)),
+            ],
+
+            // Biblioteca vazia
+            if (newest.isEmpty &&
+                frequent.isEmpty &&
+                artists.isEmpty &&
+                random.isEmpty)
+              const EmptyState(message: 'Nada encontrado no servidor Navidrome'),
+          ],
+        ),
+      ),
+    );
+  }
 }
