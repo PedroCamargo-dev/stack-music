@@ -6,9 +6,9 @@ import '../../core/models/subsonic_models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets.dart';
 
-/// Tela de playlist (ref 17.48.51): header com capa grande arredondada,
-/// rótulo "PLAYLIST" uppercase, lista com play/pause por item, faixa ativa
-/// com barra de progresso na cor primary, botões Play all / Shuffle.
+/// Tela de playlist (ref 17.48.51): header com capa grande imersiva,
+/// rótulo "PLAYLIST" uppercase, duração total, Play all/Shuffle em pílula,
+/// faixas com TrackRow unificado + barra de progresso na faixa ativa.
 class PlaylistScreen extends StatefulWidget {
   final SubsonicPlaylist playlist;
   const PlaylistScreen({super.key, required this.playlist});
@@ -56,17 +56,16 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     final textP = AppColors.textPrimary(b);
     final textS = AppColors.textSecondary(b);
     final player = context.watch<AppState>().player;
-    final totalDuration =
-        songs.fold<int>(0, (acc, s) => acc + s.duration);
+    final totalDuration = songs.fold<int>(0, (acc, s) => acc + s.duration);
 
     return Scaffold(
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Scaffold(body: SkeletonList(count: 6))
           : error != null
-              ? Center(child: Text('Erro: $error'))
+              ? ErrorState(message: 'Erro: $error', onRetry: _load)
               : CustomScrollView(
                   slivers: [
-                    // Header com capa grande e título sobreposto (ref 17.48.51)
+                    // Header com capa grande (ref 17.48.51)
                     SliverAppBar(
                       pinned: true,
                       expandedHeight: 300,
@@ -126,7 +125,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                   TextStyle(fontSize: 12, color: textS),
                             ),
                             const SizedBox(height: 16),
-                            // Play all + Shuffle
                             Row(children: [
                               FilledButton.icon(
                                 style: FilledButton.styleFrom(
@@ -161,72 +159,36 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                         ),
                       ),
                     ),
-                    // Lista de faixas
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (_, i) =>
-                            _PlaylistSongTile(song: songs[i], queue: songs),
-                        childCount: songs.length,
+                    // Faixas: TrackRow unificado + progresso na ativa
+                    if (songs.isEmpty)
+                      const SliverToBoxAdapter(
+                          child: EmptyState(message: 'Playlist vazia'))
+                    else
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (_, i) => _PlaylistRow(song: songs[i], queue: songs),
+                          childCount: songs.length,
+                        ),
                       ),
-                    ),
                   ],
                 ),
     );
   }
 }
 
-/// Tile estilo ref 17.48.51: ícone play/pause dentro de círculo no leading,
-/// título bold, artista e duração, faixa ativa com barra de progresso.
-class _PlaylistSongTile extends StatelessWidget {
+/// TrackRow com barra de progresso embutida na faixa ativa (ref 17.48.51).
+class _PlaylistRow extends StatelessWidget {
   final SubsonicSong song;
   final List<SubsonicSong> queue;
-  const _PlaylistSongTile({required this.song, required this.queue});
+  const _PlaylistRow({required this.song, required this.queue});
 
   @override
   Widget build(BuildContext context) {
     final state = context.read<AppState>().player;
-    final b = Theme.of(context).brightness;
     final isCurrent = state?.currentSong?.id == song.id;
 
     return Column(children: [
-      ListTile(
-        onTap: () =>
-            state?.playQueue(queue, startIndex: queue.indexOf(song)),
-        leading: Row(mainAxisSize: MainAxisSize.min, children: [
-          // ícone play/pause circular (ref 17.48.51)
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: isCurrent ? AppColors.primary : AppColors.surface2(b),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isCurrent && state!.player.playing
-                  ? Icons.pause
-                  : Icons.play_arrow,
-              size: 18,
-              color: isCurrent ? Colors.black : AppColors.textSecondary(b),
-            ),
-          ),
-          const SizedBox(width: 12),
-          CoverArt(coverArtId: song.coverArt, size: 48, radius: 8),
-        ]),
-        title: Text(song.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color:
-                    isCurrent ? AppColors.primary : AppColors.textPrimary(b))),
-        subtitle: Text(song.artist,
-            style: TextStyle(
-                fontSize: 13, color: AppColors.textSecondary(b))),
-        trailing: Text(song.durationLabel,
-            style: TextStyle(
-                fontSize: 13, color: AppColors.textSecondary(b))),
-      ),
+      TrackRow(song: song, queue: queue, index: queue.indexOf(song)),
       if (isCurrent)
         StreamBuilder<Duration>(
           stream: state!.player.positionStream,
@@ -240,7 +202,8 @@ class _PlaylistSongTile extends StatelessWidget {
                     ? 0
                     : pos.inSeconds / total.inSeconds,
                 minHeight: 2,
-                backgroundColor: AppColors.surface2(b),
+                backgroundColor: AppColors.surface2(
+                    Theme.of(context).brightness),
                 valueColor:
                     const AlwaysStoppedAnimation(AppColors.primary),
               ),
