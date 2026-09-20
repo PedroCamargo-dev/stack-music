@@ -7,8 +7,13 @@ import '../../core/models/subsonic_models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets.dart';
 
-/// Artist Profile (refs 17.43.15 + 17.50.11): capa grande com scrim,
-/// badge verificado, stats em uppercase, tabs ÁLBUNS | POPULAR | SOBRE.
+/// Artist Detail — RECONSTRUÇÃO VISUAL:
+/// - hero gigante edge-to-edge (35-45% da altura), nome SOBRE a foto;
+/// - gradient forte na base da foto conectando ao conteúdo;
+/// - Play dominante + Shuffle logo abaixo do hero;
+/// - Popular Songs em rows compactas;
+/// - Discografia em rail horizontal (não grid);
+/// - SOBRE/biografia real do getArtistInfo2 ao final.
 class ArtistScreen extends StatefulWidget {
   final SubsonicArtist artist;
   const ArtistScreen({super.key, required this.artist});
@@ -17,9 +22,7 @@ class ArtistScreen extends StatefulWidget {
   State<ArtistScreen> createState() => _ArtistScreenState();
 }
 
-class _ArtistScreenState extends State<ArtistScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _ArtistScreenState extends State<ArtistScreen> {
   List<SubsonicAlbum> albums = [];
   List<SubsonicSong> topSongs = [];
   ArtistInfo? info;
@@ -29,7 +32,6 @@ class _ArtistScreenState extends State<ArtistScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
     _load();
   }
 
@@ -59,10 +61,18 @@ class _ArtistScreenState extends State<ArtistScreen>
     }
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+  void _playAll() {
+    if (topSongs.isNotEmpty) {
+      context.read<AppState>().player?.playQueue(topSongs);
+    }
+  }
+
+  void _shuffleAll() {
+    final p = context.read<AppState>().player;
+    if (topSongs.isNotEmpty) {
+      p?.toggleShuffle();
+      p?.playQueue(topSongs);
+    }
   }
 
   @override
@@ -71,157 +81,171 @@ class _ArtistScreenState extends State<ArtistScreen>
     final textP = AppColors.textPrimary(b);
     final textS = AppColors.textSecondary(b);
     final artist = widget.artist;
+    final screenH = MediaQuery.of(context).size.height;
+
+    if (loading) {
+      return const Scaffold(body: SkeletonList(count: 6));
+    }
+    if (error != null) {
+      return Scaffold(
+          body: ErrorState(message: 'Erro: $error', onRetry: _load));
+    }
 
     return Scaffold(
-      body: loading
-          ? const Scaffold(body: SkeletonList(count: 6))
-           : error != null
-           ? ErrorState(message: 'Erro: $error', onRetry: _load)
-              : NestedScrollView(
-                  headerSliverBuilder: (_, __) => [
-                    SliverAppBar(
-                      pinned: true,
-                      expandedHeight: 260,
-                      leading: IconButton(
-                        icon: Icon(Icons.arrow_back, color: textP),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      flexibleSpace: FlexibleSpaceBar(
-                        background: Stack(
-                          alignment: Alignment.bottomLeft,
-                          children: [
-                            SizedBox.expand(
-                              child: CoverArt(
-                                  coverArtId: artist.coverArt, size: 600, radius: 0),
-                            ),
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.bottomCenter,
-                                  end: Alignment.topCenter,
-                                  colors: [
-                                    Theme.of(context).scaffoldBackgroundColor,
-                                    Colors.transparent,
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(children: [
-                                    Text(artist.name,
-                                        style: TextStyle(
-                                            fontSize: 28,
-                                            fontWeight: FontWeight.w700,
-                                            color: textP)),
-                                    const SizedBox(width: 6),
-                                    const Icon(Icons.verified,
-                                        color: AppColors.primary, size: 20),
-                                  ]),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    '${albums.length} ÁLBUNS · ${topSongs.length} TOP SONGS',
-                                    style: TextStyle(
-                                        fontSize: 11,
-                                        letterSpacing: 1.5,
-                                        color: textS),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      bottom: TabBar(
-                        controller: _tabController,
-                        labelColor: textP,
-                        unselectedLabelColor: textS,
-                        indicatorColor: AppColors.primary,
-                        tabs: const [
-                          Tab(text: 'ÁLBUNS'),
-                          Tab(text: 'POPULAR'),
-                          Tab(text: 'SOBRE'),
+      body: CustomScrollView(
+        slivers: [
+          // HERO — 40% da altura, edge-to-edge, nome sobre a foto
+          SliverAppBar(
+            pinned: true,
+            expandedHeight: screenH * 0.40,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              background: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CoverArt(
+                      coverArtId: artist.coverArt, size: 800, radius: 0),
+                  // gradient forte conectando a foto ao conteúdo
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        stops: const [0.0, 0.45, 1.0],
+                        colors: [
+                          Theme.of(context).scaffoldBackgroundColor,
+                          Theme.of(context)
+                              .scaffoldBackgroundColor
+                              .withValues(alpha: 0.55),
+                          Colors.transparent,
                         ],
                       ),
                     ),
-                  ],
-                  body: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      // ÁLBUNS — grade 2 colunas
-                      albums.isEmpty
-                          ? Center(child: Text('Nenhum álbum', style: TextStyle(fontSize: 13, color: textS)))
-                          : GridView.builder(
-                              padding: const EdgeInsets.all(16),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2, mainAxisSpacing: 16, crossAxisSpacing: 16),
-                              itemCount: albums.length,
-                              itemBuilder: (_, i) {
-                                final album = albums[i];
-                                return GestureDetector(
-                                  onTap: () => Navigator.of(context).pushNamed('/album', arguments: album),
-                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                    Expanded(child: CoverArt(coverArtId: album.coverArt, size: 160)),
-                                    const SizedBox(height: 6),
-                                    Text(album.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textP)),
-                                    Text('${album.year ?? ''} · ${album.songCount} faixas',
-                                        style: TextStyle(fontSize: 12, color: textS)),
-                                  ]),
-                                );
-                              },
-                            ),
-                      // POPULAR — lista numerada estilo MusicBox
-                      topSongs.isEmpty
-                          ? Center(child: Text('Sem top songs (requer Last.fm no servidor)', style: TextStyle(fontSize: 13, color: textS)))
-                          : ListView.builder(
-                              padding: const EdgeInsets.only(top: 8, bottom: 24),
-                              itemCount: topSongs.length,
-                              itemBuilder: (_, i) {
-                                final s = topSongs[i];
-                                return ListTile(
-                                  onTap: () => context.read<AppState>().player?.playQueue(topSongs, startIndex: i),
-                                  leading: Row(mainAxisSize: MainAxisSize.min, children: [
-                                    SizedBox(
-                                      width: 28,
-                                      child: Text('${i + 1}',
-                                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: textS)),
-                                    ),
-                                    CoverArt(coverArtId: s.coverArt, size: 48, radius: 8),
-                                  ]),
-                                  title: Text(s.title,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: textP)),
-                                  subtitle: Text('${s.playCount ?? 0} plays · ${s.album}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(fontSize: 13, color: textS)),
-                                  trailing: Text(s.durationLabel, style: TextStyle(fontSize: 13, color: textS)),
-                                );
-                              },
-                            ),
-                      // SOBRE — biografia
-                      ListView(
-                        padding: const EdgeInsets.all(16),
+                  ),
+                  // nome SOBRE a imagem, na base
+                  Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (info?.biography != null && info!.biography!.isNotEmpty)
-                            Text(info!.biography!,
-                                style: TextStyle(fontSize: 14, height: 1.6, color: AppColors.textSecondary(b)))
-                          else
-                            Center(child: Text('Sem biografia (requer integrações externas no servidor)',
-                                style: TextStyle(fontSize: 13, color: textS))),
+                          Text(artist.name,
+                              style: TextStyle(
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.w800,
+                                  color: textP)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${albums.length} álbuns'
+                            '${topSongs.isNotEmpty ? ' · ${topSongs.length} top songs' : ''}',
+                            style: TextStyle(
+                                fontSize: 12,
+                                letterSpacing: 1.2,
+                                color: textS),
+                          ),
                         ],
                       ),
-                    ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // AÇÕES: Play dominante + Shuffle
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+              child: Row(children: [
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: textP,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 12),
+                    shape: const StadiumBorder(),
+                  ),
+                  onPressed: _shuffleAll,
+                  icon: const Icon(Icons.shuffle, size: 18),
+                  label: const Text('Shuffle'),
+                ),
+                const Spacer(),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 14),
+                    shape: const StadiumBorder(),
+                  ),
+                  onPressed: _playAll,
+                  icon: const Icon(Icons.play_arrow),
+                  label: const Text('PLAY'),
+                ),
+              ]),
+            ),
+          ),
+          // POPULAR SONGS — rows compactas
+          if (topSongs.isNotEmpty) ...[
+            const SliverToBoxAdapter(
+                child: SectionHeader(title: 'Popular Songs')),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (_, i) => TrackRow(song: topSongs[i], queue: topSongs, index: i),
+                childCount: topSongs.length,
+              ),
+            ),
+          ],
+          // DISCOGRAPHY — rail horizontal
+          if (albums.isNotEmpty) ...[
+            const SliverToBoxAdapter(
+                child: SectionHeader(title: 'Discografia')),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 210,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: albums.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) => AlbumCard(
+                    album: albums[i],
+                    width: 160,
+                    onPlay: () async {
+                      final app = context.read<AppState>();
+                      try {
+                        final songs =
+                            await app.subsonic!.getSongsOfAlbum(albums[i].id);
+                        if (songs.isNotEmpty) {
+                          app.player?.playQueue(songs);
+                        }
+                      } catch (_) {}
+                    },
                   ),
                 ),
+              ),
+            ),
+          ],
+          // SOBRE — biografia real
+          if (info?.biography != null && info!.biography!.isNotEmpty) ...[
+            const SliverToBoxAdapter(child: SectionHeader(title: 'Sobre')),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Text(info!.biography!,
+                    style: TextStyle(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: AppColors.textSecondary(b))),
+              ),
+            ),
+          ],
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ],
+      ),
     );
   }
 }
