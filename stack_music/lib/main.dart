@@ -79,10 +79,18 @@ class _RootShellState extends State<RootShell> {
 
   @override
   Widget build(BuildContext context) {
-    final configured = context.watch<AppState>().isConfigured;
+    final app = context.watch<AppState>();
+    final configured = app.isConfigured;
+
+    // Enquanto carrega as credenciais salvas: splash simples.
+    if (!app.ready) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    }
 
     if (!configured) {
-      // Primeiro uso: empurra o login por cima (app interno já construído).
+      // Sem credencial salva (ou inválida): vai direto pro login.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
       });

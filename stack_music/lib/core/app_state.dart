@@ -1,3 +1,4 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,21 +15,28 @@ class AppState extends ChangeNotifier {
   /// URL da API de download (configurável nas settings).
   String downloadApiUrl = '';
 
+  bool _ready = false;
+  bool get ready => _ready;
   bool get isConfigured => subsonic != null;
 
   Future<void> init() async {
     final sp = await SharedPreferences.getInstance();
     downloadApiUrl = sp.getString('download_api_url') ?? 'http://localhost:3333';
+    downloadApi = DownloadApiClient(baseUrl: downloadApiUrl);
 
     final saved = await SubsonicClient.loadSaved();
     if (saved != null) {
-      await connect(saved.baseUrl, saved.username, saved.password,
-          persist: false);
+      try {
+        await connect(saved.baseUrl, saved.username, saved.password,
+            persist: false);
+      } catch (_) {
+        // credencial salva inválida/servidor offline: limpa e pede login
+        subsonic = null;
+        player = null;
+      }
     }
-    if (subsonic == null) {
-      downloadApi = DownloadApiClient(baseUrl: downloadApiUrl);
-      notifyListeners();
-    }
+    _ready = true;
+    notifyListeners();
   }
 
   Future<void> setDownloadApiUrl(String url) async {
@@ -39,16 +47,24 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Conecta ao Navidrome e valida com ping. Persiste em caso de sucesso.
+  /// Conecta ao Navidrome, valida com ping e inicializa o audio_service
+  /// (necessário para o player funcionar com notificação/background).
   Future<void> connect(String url, String user, String pass,
       {bool persist = true}) async {
     final client = SubsonicClient(baseUrl: url, username: user, password: pass);
     await client.ping(); // lança exceção se falhar
     if (persist) await client.save();
     subsonic = client;
-    player = PlayerHandler(client);
-    downloadApi ??= DownloadApiClient(baseUrl: downloadApiUrl);
-    notifyListeners();
+     player = await AudioService.init(
+     builder: () => PlayerHandler(client),
+     config: const AudioServiceConfig(
+     androidNotificationChannelId: 'com.pedrocamargo.stack_music.playback',
+     androidNotificationChannelName: 'Stack Music',
+     androidNotificationOngoing: true,
+     androidStopForegroundOnPause: true,
+     ),
+     );
+     notifyListeners();
   }
 
   Future<void> disconnect() async {
