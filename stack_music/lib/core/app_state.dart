@@ -55,16 +55,23 @@ class AppState extends ChangeNotifier {
     await client.ping(); // lança exceção se falhar
     if (persist) await client.save();
     subsonic = client;
-     player = await AudioService.init(
-     builder: () => PlayerHandler(client),
-     config: const AudioServiceConfig(
-     androidNotificationChannelId: 'com.pedrocamargo.stack_music.playback',
-     androidNotificationChannelName: 'Stack Music',
-     androidNotificationOngoing: true,
-     androidStopForegroundOnPause: true,
-     ),
-     );
-     notifyListeners();
+ // audio_service pode falhar em alguns dispositivos (MIUI/foreground) ou se
+ // ja foi inicializado; o login nao deve quebrar por isso.
+ try {
+ player ??= await AudioService.init(
+ builder: () => PlayerHandler(client),
+ config: const AudioServiceConfig(
+ androidNotificationChannelId: 'com.pedrocamargo.stack_music.playback',
+ androidNotificationChannelName: 'Stack Music',
+ androidNotificationOngoing: true,
+ androidStopForegroundOnPause: true,
+ ),
+ );
+ } catch (e) {
+ debugPrint('AudioService.init falhou, usando player local: $e');
+ player ??= PlayerHandler(client);
+ }
+ notifyListeners();
   }
 
   Future<void> disconnect() async {
