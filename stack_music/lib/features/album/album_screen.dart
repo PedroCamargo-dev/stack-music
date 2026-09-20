@@ -63,9 +63,9 @@ class _AlbumScreenState extends State<AlbumScreen> {
 
     return Scaffold(
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Scaffold(body: SkeletonList(count: 6))
           : error != null
-              ? Center(child: Text('Erro: $error'))
+              ? ErrorState(message: 'Erro: $error', onRetry: _load)
               : CustomScrollView(
                   slivers: [
                     // Capa grande imersiva (ref 17.48.51)

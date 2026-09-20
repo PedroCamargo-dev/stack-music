@@ -74,12 +74,9 @@ class _ArtistScreenState extends State<ArtistScreen>
 
     return Scaffold(
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
-          : error != null
-              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text('Erro: $error'),
-                  TextButton(onPressed: _load, child: const Text('Tentar novamente')),
-                ]))
+          ? const Scaffold(body: SkeletonList(count: 6))
+           : error != null
+           ? ErrorState(message: 'Erro: $error', onRetry: _load)
               : NestedScrollView(
                   headerSliverBuilder: (_, __) => [
                     SliverAppBar(
