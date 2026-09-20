@@ -84,7 +84,7 @@ class SubsonicClient {
  final sub = await _get('getArtists');
  final idx = (sub['artists'] as Map<String, dynamic>)['index'] as List? ?? [];
  return idx
- .expand((i) => (i['artist'] as List? ?? []) as Iterable<Map<String, dynamic>>)
+ .expand((i) => ((i['artist'] as List? ?? [])).cast<Map<String, dynamic>>())
  .map(SubsonicArtist.fromJson)
  .toList();
  }
