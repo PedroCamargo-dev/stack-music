@@ -158,7 +158,8 @@ class CoverArt extends StatelessWidget {
 class AlbumCard extends StatelessWidget {
  final SubsonicAlbum album;
  final double width;
- const AlbumCard({super.key, required this.album, this.width = 160});
+ final VoidCallback? onPlay;
+ const AlbumCard({super.key, required this.album, this.width = 160, this.onPlay});
 
  @override
  Widget build(BuildContext context) {
@@ -168,7 +169,22 @@ class AlbumCard extends StatelessWidget {
  child: SizedBox(
  width: width,
  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+ Stack(alignment: Alignment.center, children: [
  CoverArt(coverArtId: album.coverArt, size: width),
+ if (onPlay != null)
+ Positioned(
+ right: 8, bottom: 8,
+ child: GestureDetector(
+ onTap: onPlay,
+ child: Container(
+ width: 40, height: 40,
+ decoration: const BoxDecoration(
+ color: AppColors.primary, shape: BoxShape.circle),
+ child: const Icon(Icons.play_arrow, color: Colors.black, size: 24),
+ ),
+ ),
+ ),
+ ]),
  const SizedBox(height: 8),
  Text(album.name, maxLines: 1, overflow: TextOverflow.ellipsis,
  style: TextStyle(

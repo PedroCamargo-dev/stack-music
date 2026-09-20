@@ -190,19 +190,46 @@ class _SearchScreenState extends State<SearchScreen> {
  ],
  if (local!.artists.isNotEmpty) ...[
  const SectionHeader(title: 'Artists'),
- ...local!.artists.map((a) => ListTile(
- leading: ClipOval(
- child: CoverArt(coverArtId: a.coverArt, size: 48, radius: 24)),
- title: Text(a.name,
- style: TextStyle(
- fontSize: 15,
- fontWeight: FontWeight.w600,
- color: textP)),
- subtitle: Text('${a.albumCount ?? 0} albums',
- style: TextStyle(fontSize: 13, color: textS)),
+ GridView.builder(
+ shrinkWrap: true,
+ physics: const NeverScrollableScrollPhysics(),
+ padding: const EdgeInsets.symmetric(horizontal: 16),
+ gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+ crossAxisCount: 2,
+ mainAxisSpacing: 12,
+ crossAxisSpacing: 12,
+ childAspectRatio: 0.78,
+ ),
+ itemCount: local!.artists.length,
+ itemBuilder: (_, i) {
+ final a = local!.artists[i];
+ return GestureDetector(
  onTap: () =>
  Navigator.of(context).pushNamed('/artist', arguments: a),
- )),
+ child: Column(
+ crossAxisAlignment: CrossAxisAlignment.start,
+ children: [
+ Stack(children: [
+ CoverArt(
+ coverArtId: a.coverArt,
+ size: (MediaQuery.of(context).size.width - 44) / 2,
+ radius: 12),
+ Positioned(
+ right: 6, bottom: 6,
+ child: _ArtistStar(artist: a),
+ ),
+ ]),
+ const SizedBox(height: 6),
+ Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+ style: TextStyle(
+ fontSize: 14, fontWeight: FontWeight.w600, color: textP)),
+ Text('${a.albumCount ?? 0} albums',
+ style: TextStyle(fontSize: 12, color: textS)),
+ ],
+ ),
+ );
+ },
+ ),
  ],
  if (local!.albums.isNotEmpty) ...[
  const SectionHeader(title: 'Albums'),
@@ -269,6 +296,49 @@ class _SearchScreenState extends State<SearchScreen> {
  style: TextStyle(fontSize: 12, color: textS)),
  ),
  ],
+ ),
+ ),
+ );
+ }
+}
+
+/// Botao favoritar artista sobre o card (wireframe Search).
+class _ArtistStar extends StatefulWidget {
+ final SubsonicArtist artist;
+ const _ArtistStar({required this.artist});
+
+ @override
+ State<_ArtistStar> createState() => _ArtistStarState();
+}
+
+class _ArtistStarState extends State<_ArtistStar> {
+ bool starred = false;
+
+ @override
+ Widget build(BuildContext context) {
+ final b = Theme.of(context).brightness;
+ return GestureDetector(
+ onTap: () async {
+ final client = context.read<AppState>().subsonic!;
+ final next = !starred;
+ setState(() => starred = next); // optimistic
+ try {
+ next ? await client.star(widget.artist.id)
+ : await client.unstar(widget.artist.id);
+ } catch (_) {
+ if (mounted) setState(() => starred = !next); // rollback
+ }
+ },
+ child: Container(
+ width: 34, height: 34,
+ decoration: BoxDecoration(
+ color: AppColors.surface2(b),
+ shape: BoxShape.circle,
+ ),
+ child: Icon(
+ starred ? Icons.favorite : Icons.favorite_border,
+ size: 18,
+ color: starred ? AppColors.primary : AppColors.textSecondary(b),
  ),
  ),
  );

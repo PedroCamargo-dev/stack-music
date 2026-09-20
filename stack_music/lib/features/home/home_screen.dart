@@ -60,7 +60,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  String get _greeting {
+  Future<void> _playAlbum(SubsonicAlbum album) async {
+ final app = context.read<AppState>();
+ try {
+ final songs = await app.subsonic!.getSongsOfAlbum(album.id);
+ if (songs.isNotEmpty && mounted) app.player?.playQueue(songs);
+ } catch (_) {}
+ }
+
+ String get _greeting {
     final h = DateTime.now().hour;
     if (h < 12) return 'Bom dia';
     if (h < 18) return 'Boa tarde';
@@ -143,7 +151,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: newest.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (_, i) => AlbumCard(album: newest[i], width: 170),
+                  itemBuilder: (_, i) => AlbumCard(
+ album: newest[i],
+ width: 170,
+ onPlay: () => _playAlbum(newest[i]),
+ ),
                 ),
               ),
             ],
@@ -158,7 +170,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: frequent.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (_, i) => AlbumCard(album: frequent[i], width: 140),
+                  itemBuilder: (_, i) => AlbumCard(
+ album: frequent[i],
+ width: 140,
+ onPlay: () => _playAlbum(frequent[i]),
+ ),
                 ),
               ),
             ],

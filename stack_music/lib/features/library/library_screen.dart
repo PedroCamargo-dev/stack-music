@@ -29,6 +29,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   List<SubsonicArtist> artists = [];
   List<SubsonicAlbum> albums = [];
   List<RadioStation> radios = [];
+ List<SubsonicAlbum> continueList = [];
 
   @override
   void initState() {
@@ -56,6 +57,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         artists = results[2] as List<SubsonicArtist>;
         albums = results[3] as List<SubsonicAlbum>;
         radios = results[4] as List<RadioStation>;
+ continueList = results[5] as List<SubsonicAlbum>;
         loading = false;
       });
     } catch (e) {
