@@ -79,14 +79,6 @@ class RootShell extends StatefulWidget {
 }
 
 class _RootShellState extends State<RootShell> {
-  int _index = 0;
-  final _screens = const [
-    HomeScreen(),
-    SearchScreen(),
-    LibraryScreen(),
-    FavoritesScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();

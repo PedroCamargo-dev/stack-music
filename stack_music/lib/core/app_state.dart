@@ -20,23 +20,30 @@ class AppState extends ChangeNotifier {
   bool get isConfigured => subsonic != null;
 
   Future<void> init() async {
-    final sp = await SharedPreferences.getInstance();
-    downloadApiUrl = sp.getString('download_api_url') ?? 'http://localhost:3333';
-    downloadApi = DownloadApiClient(baseUrl: downloadApiUrl);
+    try {
+      final sp = await SharedPreferences.getInstance();
+      downloadApiUrl = sp.getString('download_api_url') ?? 'http://localhost:3333';
+      downloadApi = DownloadApiClient(baseUrl: downloadApiUrl);
 
-    final saved = await SubsonicClient.loadSaved();
-    if (saved != null) {
-      try {
-        await connect(saved.baseUrl, saved.username, saved.password,
-            persist: false);
-      } catch (_) {
-        // credencial salva inválida/servidor offline: limpa e pede login
-        subsonic = null;
-        player = null;
+      final saved = await SubsonicClient.loadSaved();
+      if (saved != null) {
+        try {
+          await connect(saved.baseUrl, saved.username, saved.password,
+              persist: false);
+        } catch (_) {
+          // credencial salva inválida/servidor offline: limpa e pede login
+          subsonic = null;
+          player = null;
+        }
       }
+    } catch (e) {
+      debugPrint('AppState.init falhou, mostrando login: $e');
+      subsonic = null;
+      player = null;
+    } finally {
+      _ready = true;
+      notifyListeners();
     }
-    _ready = true;
-    notifyListeners();
   }
 
   Future<void> setDownloadApiUrl(String url) async {
