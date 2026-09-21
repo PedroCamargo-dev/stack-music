@@ -62,19 +62,25 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  speed: player.speed,
  );
 
- MediaItem _toMediaItem(SubsonicSong? s) {
- if (s == null) return const MediaItem(id: '', title: '');
- return MediaItem(
- id: s.id,
- title: s.title,
- artist: s.artist,
- album: s.album,
- duration: Duration(seconds: s.duration),
- artUri: client.coverArtUrl(s.coverArt).isEmpty
- ? null
- : Uri.tryParse(client.coverArtUrl(s.coverArt, size: 300)),
- );
- }
+  MediaItem _toMediaItem(SubsonicSong? s) {
+    if (s == null) return const MediaItem(id: '', title: '');
+    return MediaItem(
+      id: s.id,
+      title: s.title,
+      artist: s.artist,
+      album: s.album,
+      duration: Duration(seconds: s.duration),
+      artUri: client.coverArtUrl(s.coverArt).isEmpty
+          ? null
+          : Uri.tryParse(client.coverArtUrl(s.coverArt, size: 300)),
+      extras: {
+        'coverArt': s.coverArt,
+        'artistId': s.artistId,
+        'albumId': s.albumId,
+        'starred': s.starred,
+      },
+    );
+  }
 
  void _scrobbleIfDue() {
  final s = currentSong;
@@ -84,16 +90,24 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  }
  }
 
- /// Monta a fila com fontes de stream e reproduz a partir de [startIndex].
- Future<void> playQueue(List<SubsonicSong> songs, {int startIndex = 0}) async {
- _queue
- ..clear()
- ..addAll(songs);
- final source = ConcatenatingAudioSource(
- children: songs.map((s) => AudioSource.uri(Uri.parse(client.streamUrl(s.id)))).toList());
- await player.setAudioSource(source, initialIndex: startIndex);
- play();
- }
+  /// Monta a fila com fontes de stream e reproduz a partir de [startIndex].
+  Future<void> playQueue(List<SubsonicSong> songs, {int startIndex = 0}) async {
+    if (songs.isEmpty) return;
+    _queue
+      ..clear()
+      ..addAll(songs);
+    _index = startIndex.clamp(0, songs.length - 1);
+    _scrobbled = false;
+    mediaItem.add(_toMediaItem(currentSong));
+
+    final source = ConcatenatingAudioSource(
+      children: songs
+          .map((s) => AudioSource.uri(Uri.parse(client.streamUrl(s.id))))
+          .toList(),
+    );
+    await player.setAudioSource(source, initialIndex: _index);
+    play();
+  }
 
  @override
  Future<void> play() => player.play();

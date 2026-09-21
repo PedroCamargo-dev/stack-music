@@ -348,11 +348,12 @@ class MiniPlayer extends StatelessWidget {
       builder: (context, mediaSnap) {
         final item = mediaSnap.data;
         final song = state.currentSong;
-        if (item == null && song == null) return const SizedBox.shrink();
-
         final title = item?.title ?? song?.title ?? '';
+        if (title.isEmpty) return const SizedBox.shrink();
+
         final artist = item?.artist ?? song?.artist ?? '';
-        final coverId = song?.coverArt;
+        final coverId =
+            item?.extras?['coverArt']?.toString() ?? song?.coverArt;
         final durationSec = item?.duration?.inSeconds ?? song?.duration ?? 0;
 
         return Padding(
