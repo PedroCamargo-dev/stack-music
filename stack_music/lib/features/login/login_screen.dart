@@ -19,7 +19,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _urlController = TextEditingController(text: 'http://localhost:4533/');
+  final _urlController = TextEditingController(text: 'http://10.0.2.2:4533/');
   final _userController = TextEditingController(text: 'pedrocamargo');
   final _passController = TextEditingController(text: 'Pedro3008@');
   bool _obscure = true;
