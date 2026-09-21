@@ -90,24 +90,43 @@ class _RootShellState extends State<RootShell> {
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
-    final configured = app.isConfigured;
 
-    // Enquanto carrega as credenciais salvas: splash simples.
+    // 1. Splash apenas enquanto carrega credenciais salvas
     if (!app.ready) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
       );
     }
 
-    if (!configured) {
-      // Sem credencial salva (ou inválida): vai direto pro login.
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
-        }
-      });
+    // 2. Se não configurado, mostra APENAS o login (sem shell/tabs por baixo)
+    if (!app.isConfigured) {
+      return const LoginScreen();
     }
 
+    // 3. Shell principal apenas quando logado
+    return const _MainShell();
+  }
+}
+
+/// Shell interno (tabs + mini player) — só renderizado após login.
+class _MainShell extends StatefulWidget {
+  const _MainShell();
+
+  @override
+  State<_MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<_MainShell> {
+  int _index = 0;
+  final _screens = const [
+    HomeScreen(),
+    SearchScreen(),
+    LibraryScreen(),
+    FavoritesScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         bottom: false,
