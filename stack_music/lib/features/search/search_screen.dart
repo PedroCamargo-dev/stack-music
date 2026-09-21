@@ -46,8 +46,10 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _loadGenres() async {
+    final client = context.read<AppState>().subsonic;
+    if (client == null) return;
     try {
-      final genres = await context.read<AppState>().subsonic!.getGenres();
+      final genres = await client.getGenres();
       if (!mounted) return;
       setState(() => _genres = genres);
     } catch (_) {}

@@ -41,7 +41,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
       loading = true;
       error = null;
     });
-    final client = context.read<AppState>().subsonic!;
+    final client = context.read<AppState>().subsonic;
+    if (client == null) {
+      setState(() {
+        loading = false;
+        error = 'Servidor não conectado';
+      });
+      return;
+    }
     try {
       final results = await Future.wait([
         client.getPlaylists(),

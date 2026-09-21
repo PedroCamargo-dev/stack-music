@@ -36,7 +36,14 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       error = null;
     });
     try {
-      final client = context.read<AppState>().subsonic!;
+      final client = context.read<AppState>().subsonic;
+      if (client == null) {
+        setState(() {
+          loading = false;
+          error = 'Servidor não conectado';
+        });
+        return;
+      }
       // getPlaylistSongs já retorna a playlist completa via getPlaylist,
       // mas buscamos também os metadados atualizados (owner, songCount).
       final results = await Future.wait([
