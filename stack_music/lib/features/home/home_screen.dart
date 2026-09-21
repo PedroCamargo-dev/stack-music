@@ -47,13 +47,16 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     try {
+      debugPrint('[HOME] _load iniciando chamadas...');
+      final t0 = DateTime.now();
       final results = await Future.wait([
-        client.getArtists(),
-        client.getAlbumList(type: 'frequent', size: 1),
-        client.getAlbumList(type: 'recent', size: 10),
-        client.getAlbumList(type: 'newest', size: 10),
-        client.getRandomSongs(size: 10),
+        client.getArtists().then((v) { debugPrint('[HOME] getArtists OK (${DateTime.now().difference(t0).inMilliseconds}ms)'); return v; }),
+        client.getAlbumList(type: 'frequent', size: 1).then((v) { debugPrint('[HOME] getAlbumList(frequent) OK (${DateTime.now().difference(t0).inMilliseconds}ms)'); return v; }),
+        client.getAlbumList(type: 'recent', size: 10).then((v) { debugPrint('[HOME] getAlbumList(recent) OK (${DateTime.now().difference(t0).inMilliseconds}ms)'); return v; }),
+        client.getAlbumList(type: 'newest', size: 10).then((v) { debugPrint('[HOME] getAlbumList(newest) OK (${DateTime.now().difference(t0).inMilliseconds}ms)'); return v; }),
+        client.getRandomSongs(size: 10).then((v) { debugPrint('[HOME] getRandomSongs OK (${DateTime.now().difference(t0).inMilliseconds}ms)'); return v; }),
       ]);
+      debugPrint('[HOME] Future.wait completo, aplicando setState...');
       setState(() {
         artists = results[0] as List<SubsonicArtist>;
         final heroList = results[1] as List<SubsonicAlbum>;
@@ -63,7 +66,9 @@ class _HomeScreenState extends State<HomeScreen> {
         topSongs = results[4] as List<SubsonicSong>;
         loading = false;
       });
+      debugPrint('[HOME] setState aplicado, loading=false');
     } catch (e) {
+      debugPrint('[HOME] _load ERRO: $e');
       setState(() {
         loading = false;
         error = e.toString();
