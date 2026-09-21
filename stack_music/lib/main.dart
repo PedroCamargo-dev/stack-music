@@ -12,6 +12,8 @@ import 'features/login/login_screen.dart';
 import 'features/player/now_playing_screen.dart';
 import 'features/playlist/playlist_screen.dart';
 import 'features/search/search_screen.dart';
+import 'features/favorites/favorites_screen.dart';
+import 'features/profile/profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'shared/widgets.dart';
 
@@ -41,6 +43,8 @@ class StackMusicApp extends StatelessWidget {
               '/login': (_) => const LoginScreen(),
               '/nowplaying': (_) => const NowPlayingScreen(),
               '/settings': (_) => const SettingsScreen(),
+              '/favorites': (_) => const FavoritesScreen(),
+              '/profile': (_) => const ProfileScreen(),
             },
             onGenerateRoute: (settings) {
               final args = settings.arguments;
