@@ -358,55 +358,50 @@ class MiniPlayer extends StatelessWidget {
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-          child: Material(
-            color: AppColors.surface2(b),
-            borderRadius: BorderRadius.circular(16),
-            elevation: 4,
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Progress bar fina no topo (2.5px)
-                StreamBuilder<Duration>(
-                  stream: state.player.positionStream,
-                  builder: (_, snap) {
-                    final pos = snap.data ?? Duration.zero;
-                    final total = Duration(seconds: durationSec);
-                    final progress = total.inMilliseconds == 0
-                        ? 0.0
-                        : pos.inMilliseconds / total.inMilliseconds;
-                    return SizedBox(
-                      height: 2.5,
-                      child: LinearProgressIndicator(
-                        value: progress.clamp(0.0, 1.0),
-                        backgroundColor: AppColors.textSecondary(b)
-                            .withValues(alpha: 0.12),
-                        valueColor: AlwaysStoppedAnimation(AppColors.primary),
-                        minHeight: 2.5,
-                      ),
-                    );
-                  },
-                ),
-                // Corpo do mini player
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  child: Row(
-                    children: [
-                      // Cover art
-                      GestureDetector(
-                        onTap: () =>
-                            Navigator.of(context).pushNamed('/nowplaying'),
-                        child: CoverArt(
-                            coverArtId: coverId, size: 44, radius: 10),
-                      ),
-                      const SizedBox(width: 12),
-                      // Track info
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () =>
-                              Navigator.of(context).pushNamed('/nowplaying'),
-                          behavior: HitTestBehavior.opaque,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () =>
+                Navigator.of(context, rootNavigator: true).pushNamed('/nowplaying'),
+            child: Material(
+              color: AppColors.surface2(b),
+              borderRadius: BorderRadius.circular(16),
+              elevation: 6,
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Progress bar fina no topo (2.5px)
+                  StreamBuilder<Duration>(
+                    stream: state.player.positionStream,
+                    builder: (_, snap) {
+                      final pos = snap.data ?? Duration.zero;
+                      final total = Duration(seconds: durationSec);
+                      final progress = total.inMilliseconds == 0
+                          ? 0.0
+                          : pos.inMilliseconds / total.inMilliseconds;
+                      return SizedBox(
+                        height: 2.5,
+                        child: LinearProgressIndicator(
+                          value: progress.clamp(0.0, 1.0),
+                          backgroundColor: AppColors.textSecondary(b)
+                              .withValues(alpha: 0.12),
+                          valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                          minHeight: 2.5,
+                        ),
+                      );
+                    },
+                  ),
+                  // Corpo do mini player
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    child: Row(
+                      children: [
+                        // Cover art
+                        CoverArt(coverArtId: coverId, size: 44, radius: 10),
+                        const SizedBox(width: 12),
+                        // Track info
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -434,34 +429,34 @@ class MiniPlayer extends StatelessWidget {
                             ],
                           ),
                         ),
-                      ),
-                      // Play / Pause button
-                      StreamBuilder<PlaybackState>(
-                        stream: state.playbackState,
-                        builder: (_, snap) {
-                          final isPlaying =
-                              snap.data?.playing ?? state.player.playing;
-                          return _MiniPlayerBtn(
-                            icon: isPlaying
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                            brightness: b,
-                            onTap: () =>
-                                isPlaying ? state.pause() : state.play(),
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 2),
-                      // Next button
-                      _MiniPlayerBtn(
-                        icon: Icons.skip_next_rounded,
-                        brightness: b,
-                        onTap: () => state.skipToNext(),
-                      ),
-                    ],
+                        // Play / Pause button
+                        StreamBuilder<PlaybackState>(
+                          stream: state.playbackState,
+                          builder: (_, snap) {
+                            final isPlaying =
+                                snap.data?.playing ?? state.player.playing;
+                            return _MiniPlayerBtn(
+                              icon: isPlaying
+                                  ? Icons.pause_rounded
+                                  : Icons.play_arrow_rounded,
+                              brightness: b,
+                              onTap: () =>
+                                  isPlaying ? state.pause() : state.play(),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 2),
+                        // Next button
+                        _MiniPlayerBtn(
+                          icon: Icons.skip_next_rounded,
+                          brightness: b,
+                          onTap: () => state.skipToNext(),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
