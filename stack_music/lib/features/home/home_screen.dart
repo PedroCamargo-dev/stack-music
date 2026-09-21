@@ -310,90 +310,86 @@ class _DiscoverHero extends StatelessWidget {
         app.subsonic?.coverArtUrl(album.coverArt, size: 800) ?? '';
     final b = Theme.of(context).brightness;
 
-    return AspectRatio(
-      aspectRatio: 1.6,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Artwork edge-to-edge
-            if (url.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.cover,
-                placeholder: (_, __) =>
-                    _heroPlaceholder(b),
-                errorWidget: (_, __, ___) =>
-                    _heroPlaceholder(b),
-              )
-            else
-              _heroPlaceholder(b),
-
-            // Gradient scrim para leitura
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.0),
-                      Colors.black.withValues(alpha: 0.65),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final height = constraints.maxWidth / 1.6;
+        return SizedBox(
+          height: height,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (url.isNotEmpty)
+                  CachedNetworkImage(
+                    imageUrl: url,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => _heroPlaceholder(b),
+                    errorWidget: (_, __, ___) => _heroPlaceholder(b),
+                  )
+                else
+                  _heroPlaceholder(b),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.0),
+                          Colors.black.withValues(alpha: 0.65),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 16,
+                  right: 72,
+                  bottom: 16,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(album.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      const SizedBox(height: 4),
+                      Text(album.artist,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withValues(alpha: 0.85))),
                     ],
                   ),
                 ),
-              ),
-            ),
-
-            // Texto sobre a imagem
-            Positioned(
-              left: 16,
-              right: 72,
-              bottom: 16,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(album.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)),
-                  const SizedBox(height: 4),
-                  Text(album.artist,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.85))),
-                ],
-              ),
-            ),
-
-            // Botão PLAY flutuante canto inferior direito
-            Positioned(
-              right: 12,
-              bottom: 12,
-              child: GestureDetector(
-                onTap: onPlay,
-                child: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
+                Positioned(
+                  right: 12,
+                  bottom: 12,
+                  child: GestureDetector(
+                    onTap: onPlay,
+                    child: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.play_arrow,
+                          color: Colors.black, size: 28),
+                    ),
                   ),
-                  child: const Icon(Icons.play_arrow,
-                      color: Colors.black, size: 28),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
