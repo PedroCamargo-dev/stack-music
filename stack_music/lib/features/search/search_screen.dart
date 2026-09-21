@@ -81,9 +81,14 @@ class _SearchScreenState extends State<SearchScreen> {
       _lastQuery = q;
     });
     final app = context.read<AppState>();
+    final client = app.subsonic;
+    if (client == null) {
+      setState(() => _searching = false);
+      return;
+    }
     try {
       final results = await Future.wait([
-        app.subsonic!.search3(q),
+        client.search3(q),
         app.downloadApi?.search(q) ?? Future.value(null),
       ]);
       if (!mounted || epoch != _searchEpoch) return;
