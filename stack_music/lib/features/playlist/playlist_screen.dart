@@ -59,9 +59,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   String get _totalDuration {
     final t = songs.fold<int>(0, (acc, s) => acc + s.duration);
-    if (t <= 0 && (playlist.duration ?? 0) > 0) {
-      final d = playlist.duration!;
-      return '${d ~/ 3600}h ${d % 3600 ~/ 60}min';
+    final pd = playlist.duration ?? 0;
+    if (t <= 0 && pd > 0) {
+      return '${pd ~/ 3600}h ${pd % 3600 ~/ 60}min';
     }
     return '${t ~/ 3600}h ${t % 3600 ~/ 60}min';
   }
