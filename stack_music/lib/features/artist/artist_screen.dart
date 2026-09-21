@@ -190,8 +190,14 @@ class _ArtistScreenState extends State<ArtistScreen> {
           ),
           // POPULAR SONGS — rows compactas
           if (topSongs.isNotEmpty) ...[
-            const SliverToBoxAdapter(
-                child: SectionHeader(title: 'Popular Songs')),
+            SliverToBoxAdapter(
+              child: SectionHeader(
+                title: 'Popular Songs',
+                onShowAll: () {
+                  // TODO: navegar para lista completa de músicas do artista
+                },
+              ),
+            ),
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (_, i) => TrackRow(song: topSongs[i], queue: topSongs, index: i),
