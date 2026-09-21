@@ -235,7 +235,7 @@ class _CompactHeader extends StatelessWidget {
 
     return Container(
       constraints: const BoxConstraints(maxHeight: 64),
-      padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
       child: Row(
         children: [
           Expanded(
@@ -245,10 +245,10 @@ class _CompactHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(greeting,
-                    style: TextStyle(fontSize: 13, color: textS)),
+                    style: TextStyle(fontSize: 12, color: textS)),
                 Text('Music',
                     style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 22,
                         fontWeight: FontWeight.w700,
                         color: textP)),
               ],
