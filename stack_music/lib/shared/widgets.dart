@@ -513,12 +513,9 @@ class BottomNavigation extends StatelessWidget {
         elevation: 8,
         borderRadius: BorderRadius.circular(20),
         clipBehavior: Clip.antiAlias,
-        child: SafeArea(
-          top: false,
-          minimum: const EdgeInsets.only(bottom: 4),
-          child: SizedBox(
-            height: 60,
-            child: Row(
+        child: SizedBox(
+          height: 56,
+          child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _NavItem(
