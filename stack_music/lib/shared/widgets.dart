@@ -1,3 +1,4 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -338,111 +339,132 @@ class MiniPlayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>().player;
-    final song = state?.currentSong;
-    if (song == null) return const SizedBox.shrink();
+    if (state == null) return const SizedBox.shrink();
 
     final b = Theme.of(context).brightness;
-    final isPlaying = state!.player.playing;
 
-    return GestureDetector(
-      onTap: () => Navigator.of(context).pushNamed('/nowplaying'),
-      child: Container(
-        height: 68,
-        decoration: BoxDecoration(
-          color: AppColors.surface2(b),
-          border: Border(
-            top: BorderSide(
-              color: AppColors.textSecondary(b).withValues(alpha: 0.08),
-              width: 0.5,
+    return StreamBuilder<MediaItem?>(
+      stream: state.mediaItem,
+      builder: (context, mediaSnap) {
+        final item = mediaSnap.data;
+        final song = state.currentSong;
+        if (item == null && song == null) return const SizedBox.shrink();
+
+        final title = item?.title ?? song?.title ?? '';
+        final artist = item?.artist ?? song?.artist ?? '';
+        final coverId = song?.coverArt;
+        final durationSec = item?.duration?.inSeconds ?? song?.duration ?? 0;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+          child: Material(
+            color: AppColors.surface2(b),
+            borderRadius: BorderRadius.circular(16),
+            elevation: 4,
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Progress bar fina no topo (2.5px)
+                StreamBuilder<Duration>(
+                  stream: state.player.positionStream,
+                  builder: (_, snap) {
+                    final pos = snap.data ?? Duration.zero;
+                    final total = Duration(seconds: durationSec);
+                    final progress = total.inMilliseconds == 0
+                        ? 0.0
+                        : pos.inMilliseconds / total.inMilliseconds;
+                    return SizedBox(
+                      height: 2.5,
+                      child: LinearProgressIndicator(
+                        value: progress.clamp(0.0, 1.0),
+                        backgroundColor: AppColors.textSecondary(b)
+                            .withValues(alpha: 0.12),
+                        valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                        minHeight: 2.5,
+                      ),
+                    );
+                  },
+                ),
+                // Corpo do mini player
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: Row(
+                    children: [
+                      // Cover art
+                      GestureDetector(
+                        onTap: () =>
+                            Navigator.of(context).pushNamed('/nowplaying'),
+                        child: CoverArt(
+                            coverArtId: coverId, size: 44, radius: 10),
+                      ),
+                      const SizedBox(width: 12),
+                      // Track info
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () =>
+                              Navigator.of(context).pushNamed('/nowplaying'),
+                          behavior: HitTestBehavior.opaque,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary(b),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                artist,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary(b),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Play / Pause button
+                      StreamBuilder<PlaybackState>(
+                        stream: state.playbackState,
+                        builder: (_, snap) {
+                          final isPlaying =
+                              snap.data?.playing ?? state.player.playing;
+                          return _MiniPlayerBtn(
+                            icon: isPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            brightness: b,
+                            onTap: () =>
+                                isPlaying ? state.pause() : state.play(),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 2),
+                      // Next button
+                      _MiniPlayerBtn(
+                        icon: Icons.skip_next_rounded,
+                        brightness: b,
+                        onTap: () => state.skipToNext(),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Progress bar fina no topo (2px)
-            StreamBuilder<Duration>(
-              stream: state.player.positionStream,
-              builder: (_, snap) {
-                final pos = snap.data ?? Duration.zero;
-                final total = Duration(seconds: song.duration);
-                final progress =
-                    total.inSeconds == 0 ? 0.0 : pos.inMilliseconds / total.inMilliseconds;
-                return SizedBox(
-                  height: 2,
-                  child: LinearProgressIndicator(
-                    value: progress.clamp(0.0, 1.0),
-                    backgroundColor: AppColors.textSecondary(b).withValues(alpha: 0.12),
-                    valueColor: AlwaysStoppedAnimation(AppColors.primary),
-                    minHeight: 2,
-                  ),
-                );
-              },
-            ),
-            // Corpo do mini player
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  // Cover art
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pushNamed('/nowplaying'),
-                    child: CoverArt(coverArtId: song.coverArt, size: 48, radius: 8),
-                  ),
-                  const SizedBox(width: 12),
-                  // Track info
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(context).pushNamed('/nowplaying'),
-                      behavior: HitTestBehavior.opaque,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            song.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary(b),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            song.artist,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary(b),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Play/Pause button
-                  _MiniPlayerBtn(
-                    icon: isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                    brightness: b,
-                    onTap: () => isPlaying ? state.pause() : state.play(),
-                  ),
-                  const SizedBox(width: 2),
-                  // Next button
-                  _MiniPlayerBtn(
-                    icon: Icons.skip_next_rounded,
-                    brightness: b,
-                    onTap: () => state.skipToNext(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
