@@ -691,16 +691,18 @@ func search(c *gin.Context) {
 		}
 	}()
 
-	// ==== BUSCA NO SPOTIFY ====
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	// ==== BUSCA NO SPOTIFY (opcional) ====
+	spotifyEnabled := clientID != "" && clientSecret != ""
+	if spotifyEnabled {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
 
-		token, err := getAccessToken("spotify")
-		if err != nil {
-			log.WithError(err).Error("Failed to get Spotify token")
-			return
-		}
+			token, err := getAccessToken("spotify")
+			if err != nil {
+				log.WithError(err).Error("Failed to get Spotify token")
+				return
+			}
 
 		escapedQuery := url.QueryEscape(query)
 
@@ -837,6 +839,7 @@ func search(c *gin.Context) {
 		}
 		spotifyResult["pagination"] = pagination
 	}()
+	} // fim spotifyEnabled
 
 	// Aguarda ambas as buscas terminarem
 	wg.Wait()

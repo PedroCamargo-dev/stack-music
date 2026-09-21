@@ -110,25 +110,47 @@ class _MainShell extends StatefulWidget {
 
 class _MainShellState extends State<_MainShell> {
   int _index = 0;
+  late final ValueNotifier<int> _tabIndex;
   final _screens = const [
     HomeScreen(),
     SearchScreen(),
     LibraryScreen(),
     FavoritesScreen(),
+    SettingsScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabIndex = ValueNotifier<int>(0);
+    _tabIndex.addListener(() {
+      if (_tabIndex.value != _index) setState(() => _index = _tabIndex.value);
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabIndex.dispose();
+    super.dispose();
+  }
+
+  void _switchTab(int i) => _tabIndex.value = i;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: IndexedStack(index: _index, children: _screens),
+        child: IndexedStack(index: _index, children: [
+          HomeScreen(tabIndex: _tabIndex),
+          ..._screens.skip(1),
+        ]),
       ),
       bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
         const MiniPlayer(),
         BottomNavigation(
           selectedIndex: _index,
-          onDestinationSelected: (i) => setState(() => _index = i),
+          onDestinationSelected: _switchTab,
         ),
       ]),
     );

@@ -192,6 +192,15 @@ class SubsonicClient {
  Future<void> deletePlaylist(String id) async => _get('deletePlaylist', {'id': id});
 
  // ---- Media retrieval ----
+ /// Stable artwork identity, independent of each request's salt/token.
+ /// Namespace by server, account, artwork and source resolution; no secrets
+ /// are written to the cache key. Authentication URLs still use fresh tokens.
+ String coverArtCacheKey(String? coverArtId, {int size = 600}) {
+ final base = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+ final identity = jsonEncode([base, username, coverArtId, size]);
+ return 'cover-${crypto.sha256.convert(utf8.encode(identity))}';
+ }
+
  String coverArtUrl(String? coverArtId, {int size = 600}) =>
  coverArtId == null ? '' : buildUri('getCoverArt', {'id': coverArtId, 'size': size}).toString();
 

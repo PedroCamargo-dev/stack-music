@@ -8,6 +8,25 @@ import '../core/models/subsonic_models.dart';
 import '../core/theme/app_theme.dart';
 
 // ============================================================
+// ShellTabController: permite que widgets filhos troquem a aba ativa
+// ============================================================
+
+/// Permite que widgets filhos (ex: header da Home) troquem a aba ativa do shell.
+class ShellTabController extends InheritedWidget {
+  final ValueChanged<int> switchTab;
+  const ShellTabController({super.key, required this.switchTab, required super.child});
+
+  static ValueChanged<int> of(BuildContext context) {
+    final w = context.dependOnInheritedWidgetOfExactType<ShellTabController>();
+    assert(w != null, 'ShellTabController not found in context');
+    return w!.switchTab;
+  }
+
+  @override
+  bool updateShouldNotify(ShellTabController old) => switchTab != old.switchTab;
+}
+
+// ============================================================
 // Estados padronizados: Skeleton / Empty / Error
 // ============================================================
 
@@ -121,17 +140,23 @@ class CoverArt extends StatelessWidget {
 
  @override
  Widget build(BuildContext context) {
- final url = context.read<AppState>().subsonic?.coverArtUrl(coverArtId, size: 600) ?? '';
+ final client = context.read<AppState>().subsonic;
+ final url = client?.coverArtUrl(coverArtId, size: 600) ?? '';
  if (url.isEmpty) {
  return _placeholder(context);
  }
+ // Decode enough pixels for this display, never upscale the 600px source.
+ final decodeSize = (size * MediaQuery.devicePixelRatioOf(context)).ceil().clamp(1, 600);
  return ClipRRect(
  borderRadius: BorderRadius.circular(radius),
  child: CachedNetworkImage(
  imageUrl: url,
+ cacheKey: client?.coverArtCacheKey(coverArtId, size: 600),
  width: size,
  height: size,
  fit: BoxFit.cover,
+ memCacheWidth: decodeSize,
+ memCacheHeight: decodeSize,
  placeholder: (_, __) => _placeholder(context),
  errorWidget: (_, __, ___) => _placeholder(context),
  ),
@@ -571,6 +596,15 @@ class BottomNavigation extends StatelessWidget {
                 primaryColor: primary,
                 unselectedColor: textS,
                 onTap: () => onDestinationSelected(3),
+              ),
+              _NavItem(
+                icon: Icons.settings_outlined,
+                selectedIcon: Icons.settings,
+                label: 'Settings',
+                isSelected: selectedIndex == 4,
+                primaryColor: primary,
+                unselectedColor: textS,
+                onTap: () => onDestinationSelected(4),
               ),
             ],
           ),

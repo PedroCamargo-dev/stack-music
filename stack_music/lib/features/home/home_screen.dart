@@ -12,7 +12,8 @@ import '../../shared/widgets.dart';
 /// top songs em lista compacta de TrackRows, mini player persistente.
 /// Seções vazias não renderizam. Dados reais via Subsonic/Navidrome.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final ValueNotifier<int>? tabIndex;
+  const HomeScreen({super.key, this.tabIndex});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -123,10 +124,10 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             // 1. HEADER COMPACTO (max 64px)
             _CompactHeader(
-              greeting: _greeting,
+              greeting: '$_greeting${user.isNotEmpty ? ', $user' : ''}',
               username: user,
-              onSearch: () => Navigator.of(context).pushNamed('/search'),
-              onAvatar: () => Navigator.of(context).pushNamed('/settings'),
+              onSearch: () => widget.tabIndex?.value = 1,
+              onAvatar: () => Navigator.of(context).pushNamed('/profile'),
             ),
 
             // 2. POPULAR ARTISTS RAIL
