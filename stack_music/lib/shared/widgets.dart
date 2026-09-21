@@ -329,88 +329,156 @@ class TrackRow extends StatelessWidget {
 }
 
 // ============================================================
-// MiniPlayer (ref 17.48.51) — pílula persistente global
+// MiniPlayer — barra persistente elegante acima da BottomNav
 // ============================================================
 
 class MiniPlayer extends StatelessWidget {
- const MiniPlayer({super.key});
+  const MiniPlayer({super.key});
 
- @override
- Widget build(BuildContext context) {
- final state = context.watch<AppState>().player;
- final song = state?.currentSong;
- if (song == null) return const SizedBox.shrink();
+  @override
+  Widget build(BuildContext context) {
+    final state = context.watch<AppState>().player;
+    final song = state?.currentSong;
+    if (song == null) return const SizedBox.shrink();
 
- return GestureDetector(
- onTap: () => Navigator.of(context).pushNamed('/nowplaying'),
- child: Container(
- margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
- padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
- decoration: BoxDecoration(
- color: AppColors.primary,
- borderRadius: BorderRadius.circular(999),
- ),
- child: Row(children: [
- CoverArt(coverArtId: song.coverArt, size: 36, radius: 8),
- const SizedBox(width: 10),
- Expanded(
- child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
- Text(song.title,
- maxLines: 1,
- overflow: TextOverflow.ellipsis,
- style: const TextStyle(
- fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black)),
- Text(song.artist,
- maxLines: 1,
- style: TextStyle(
- fontSize: 12, color: Colors.black.withValues(alpha: 0.7))),
- ]),
- ),
- // progresso discreto
- StreamBuilder<Duration>(
- stream: state!.player.positionStream,
- builder: (_, snap) {
- final pos = snap.data ?? Duration.zero;
- final total = Duration(seconds: song.duration);
- return SizedBox(
- width: 40,
- child: LinearProgressIndicator(
- value: total.inSeconds == 0 ? 0 : pos.inSeconds / total.inSeconds,
- backgroundColor: Colors.black.withValues(alpha: 0.2),
- valueColor: const AlwaysStoppedAnimation(Colors.black),
- ),
- );
- },
- ),
- _BlackBtn(
- icon: state.player.playing ? Icons.pause : Icons.play_arrow,
- onTap: () => state.player.playing ? state.pause() : state.play(),
- ),
- _BlackBtn(
- icon: Icons.skip_next,
- onTap: () => state.skipToNext(),
- ),
- const Icon(Icons.keyboard_arrow_up, color: Colors.black),
- ]),
- ),
- );
- }
+    final b = Theme.of(context).brightness;
+    final isPlaying = state!.player.playing;
+
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pushNamed('/nowplaying'),
+      child: Container(
+        height: 68,
+        decoration: BoxDecoration(
+          color: AppColors.surface2(b),
+          border: Border(
+            top: BorderSide(
+              color: AppColors.textSecondary(b).withValues(alpha: 0.08),
+              width: 0.5,
+            ),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Progress bar fina no topo (2px)
+            StreamBuilder<Duration>(
+              stream: state.player.positionStream,
+              builder: (_, snap) {
+                final pos = snap.data ?? Duration.zero;
+                final total = Duration(seconds: song.duration);
+                final progress =
+                    total.inSeconds == 0 ? 0.0 : pos.inMilliseconds / total.inMilliseconds;
+                return SizedBox(
+                  height: 2,
+                  child: LinearProgressIndicator(
+                    value: progress.clamp(0.0, 1.0),
+                    backgroundColor: AppColors.textSecondary(b).withValues(alpha: 0.12),
+                    valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                    minHeight: 2,
+                  ),
+                );
+              },
+            ),
+            // Corpo do mini player
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  // Cover art
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pushNamed('/nowplaying'),
+                    child: CoverArt(coverArtId: song.coverArt, size: 48, radius: 8),
+                  ),
+                  const SizedBox(width: 12),
+                  // Track info
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pushNamed('/nowplaying'),
+                      behavior: HitTestBehavior.opaque,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            song.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary(b),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            song.artist,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary(b),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Play/Pause button
+                  _MiniPlayerBtn(
+                    icon: isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    brightness: b,
+                    onTap: () => isPlaying ? state.pause() : state.play(),
+                  ),
+                  const SizedBox(width: 2),
+                  // Next button
+                  _MiniPlayerBtn(
+                    icon: Icons.skip_next_rounded,
+                    brightness: b,
+                    onTap: () => state.skipToNext(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _BlackBtn extends StatelessWidget {
- final IconData icon;
- final VoidCallback onTap;
- const _BlackBtn({required this.icon, required this.onTap});
+class _MiniPlayerBtn extends StatelessWidget {
+  final IconData icon;
+  final Brightness brightness;
+  final VoidCallback onTap;
 
- @override
- Widget build(BuildContext context) {
- return IconButton(
- visualDensity: VisualDensity.compact,
- iconSize: 22,
- icon: Icon(icon, color: Colors.black),
- onPressed: onTap,
- );
- }
+  const _MiniPlayerBtn({
+    required this.icon,
+    required this.brightness,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Center(
+            child: Icon(
+              icon,
+              size: 24,
+              color: AppColors.textPrimary(brightness),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ============================================================
