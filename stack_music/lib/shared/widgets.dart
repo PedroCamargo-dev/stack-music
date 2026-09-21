@@ -485,6 +485,137 @@ class _MiniPlayerBtn extends StatelessWidget {
 // SectionHeader com "See all" (ref 17.50.11)
 // ============================================================
 
+// ============================================================
+// BottomNavigation — barra compacta flutuante (4 tabs)
+// ============================================================
+
+class BottomNavigation extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  const BottomNavigation({
+    super.key,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final b = Theme.of(context).brightness;
+    final primary = b == Brightness.dark ? AppColors.primary : AppColors.primaryLight;
+    final textS = AppColors.textSecondary(b);
+    final surface = AppColors.surface(b);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Material(
+        color: surface,
+        elevation: 8,
+        borderRadius: BorderRadius.circular(20),
+        clipBehavior: Clip.antiAlias,
+        child: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.only(bottom: 4),
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _NavItem(
+                  icon: Icons.home_outlined,
+                  selectedIcon: Icons.home,
+                  label: 'Home',
+                  isSelected: selectedIndex == 0,
+                  primaryColor: primary,
+                  unselectedColor: textS,
+                  onTap: () => onDestinationSelected(0),
+                ),
+                _NavItem(
+                  icon: Icons.search,
+                  selectedIcon: Icons.search,
+                  label: 'Search',
+                  isSelected: selectedIndex == 1,
+                  primaryColor: primary,
+                  unselectedColor: textS,
+                  onTap: () => onDestinationSelected(1),
+                ),
+                _NavItem(
+                  icon: Icons.library_music_outlined,
+                  selectedIcon: Icons.library_music,
+                  label: 'Library',
+                  isSelected: selectedIndex == 2,
+                  primaryColor: primary,
+                  unselectedColor: textS,
+                  onTap: () => onDestinationSelected(2),
+                ),
+                _NavItem(
+                  icon: Icons.favorite_outline,
+                  selectedIcon: Icons.favorite,
+                  label: 'Favorites',
+                  isSelected: selectedIndex == 3,
+                  primaryColor: primary,
+                  unselectedColor: textS,
+                  onTap: () => onDestinationSelected(3),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool isSelected;
+  final Color primaryColor;
+  final Color unselectedColor;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.isSelected,
+    required this.primaryColor,
+    required this.unselectedColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isSelected ? primaryColor : unselectedColor;
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(isSelected ? selectedIcon : icon, size: 24, color: color),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// SectionHeader com "See all" (ref 17.50.11)
+// ============================================================
+
 class SectionHeader extends StatelessWidget {
  final String title;
  final VoidCallback? onShowAll;

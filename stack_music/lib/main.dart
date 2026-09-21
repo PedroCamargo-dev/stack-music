@@ -69,7 +69,8 @@ class StackMusicApp extends StatelessWidget {
   }
 }
 
-/// Shell com bottom nav (Home, Search, Library) + mini-player fixo.
+/// App Shell: Conteúdo → Mini Player → Bottom Navigation.
+/// Respeita safe-area superior/inferior. Navegação não interrompe reprodução.
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
 
@@ -79,7 +80,12 @@ class RootShell extends StatefulWidget {
 
 class _RootShellState extends State<RootShell> {
   int _index = 0;
-  final _screens = const [HomeScreen(), SearchScreen(), LibraryScreen()];
+  final _screens = const [
+    HomeScreen(),
+    SearchScreen(),
+    LibraryScreen(),
+    FavoritesScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -96,28 +102,22 @@ class _RootShellState extends State<RootShell> {
     if (!configured) {
       // Sem credencial salva (ou inválida): vai direto pro login.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+        }
       });
     }
 
     return Scaffold(
-      body: IndexedStack(index: _index, children: _screens),
+      body: SafeArea(
+        bottom: false,
+        child: IndexedStack(index: _index, children: _screens),
+      ),
       bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
         const MiniPlayer(),
-        NavigationBar(
+        BottomNavigation(
           selectedIndex: _index,
           onDestinationSelected: (i) => setState(() => _index = i),
-          destinations: const [
-            NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Home'),
-            NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
-            NavigationDestination(
-                icon: Icon(Icons.library_music_outlined),
-                selectedIcon: Icon(Icons.library_music),
-                label: 'Library'),
-          ],
         ),
       ]),
     );
