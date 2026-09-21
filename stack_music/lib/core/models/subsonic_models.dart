@@ -124,6 +124,7 @@ class SubsonicPlaylist {
   final int songCount;
   final String? owner;
   final int? duration;
+  bool starred;
 
   SubsonicPlaylist({
     required this.id,
@@ -132,6 +133,7 @@ class SubsonicPlaylist {
     this.songCount = 0,
     this.owner,
     this.duration,
+    this.starred = false,
   });
 
   factory SubsonicPlaylist.fromJson(Map<String, dynamic> j) =>
@@ -142,6 +144,7 @@ class SubsonicPlaylist {
         songCount: j['songCount'] ?? 0,
         owner: j['owner'],
         duration: j['duration'],
+        starred: j['starred'] != null,
       );
 }
 
