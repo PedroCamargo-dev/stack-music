@@ -96,9 +96,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = context.watch<AppState>().subsonic?.username ?? '';
 
     if (loading) {
+      debugPrint('[HOME] build: loading=true, mostrando SkeletonList');
       return const Scaffold(body: SkeletonList(count: 8));
     }
     if (error != null) {
+      debugPrint('[HOME] build: error=$error');
       return Scaffold(
         body: ErrorState(message: 'Erro ao carregar: $error', onRetry: _load),
       );
@@ -110,6 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
         newest.isNotEmpty ||
         topSongs.isNotEmpty;
 
+    debugPrint('[HOME] build: renderizando Scaffold (artists=${artists.length}, hero=${heroAlbum != null}, recent=${recent.length}, newest=${newest.length}, topSongs=${topSongs.length})');
+    try {
     return Scaffold(
       body: RefreshIndicator(
         color: AppColors.primary,
@@ -207,6 +211,15 @@ class _HomeScreenState extends State<HomeScreen> {
       // 7. MINI PLAYER persistente acima da bottom nav
       bottomNavigationBar: const MiniPlayer(),
     );
+    } catch (e, st) {
+      debugPrint('[HOME] build ERRO: $e\n$st');
+      return Scaffold(
+        body: ErrorState(
+          message: 'Erro ao renderizar Home: $e',
+          onRetry: _load,
+        ),
+      );
+    }
   }
 }
 
