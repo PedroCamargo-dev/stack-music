@@ -208,9 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      // 7. MINI PLAYER persistente acima da bottom nav
-      bottomNavigationBar: const MiniPlayer(),
-    );
+      );
     } catch (e, st) {
       debugPrint('[HOME] build ERRO: $e\n$st');
       return Scaffold(
