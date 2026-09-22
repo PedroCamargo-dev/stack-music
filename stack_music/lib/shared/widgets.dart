@@ -303,6 +303,32 @@ class TrackRow extends StatelessWidget {
  this.trailing,
  });
 
+ Future<void> _showActions(BuildContext context) async {
+ final app = context.read<AppState>();
+ final downloader = app.downloader;
+ if (downloader == null) return;
+ final downloaded = app.downloadStore?.isDownloaded(song.id) ?? false;
+ await showModalBottomSheet<void>(
+ context: context,
+ builder: (sheetContext) => SafeArea(
+ child: ListTile(
+ leading: Icon(downloaded
+ ? Icons.delete_outline
+ : Icons.download_for_offline_outlined),
+ title: Text(downloaded ? 'Remover download' : 'Baixar faixa'),
+ onTap: () async {
+ Navigator.pop(sheetContext);
+ if (downloaded) {
+ await downloader.removeDownload(song.id);
+ } else {
+ await downloader.enqueueTrack(song);
+ }
+ },
+ ),
+ ),
+ );
+ }
+
  @override
  Widget build(BuildContext context) {
  final app = context.read<AppState>();
@@ -313,6 +339,7 @@ class TrackRow extends StatelessWidget {
  return ListTile(
  onTap: () => state?.playQueue(queue,
  startIndex: showIndex && index != null ? index! : queue.indexOf(song)),
+ onLongPress: app.downloader == null ? null : () => _showActions(context),
  dense: true,
  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
  leading: Row(mainAxisSize: MainAxisSize.min, children: [

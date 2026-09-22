@@ -185,12 +185,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         width: 140,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             CoverArt(
                                 coverArtId: a.coverArt,
                                 size: 140,
                                 radius: 12),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             Text(a.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

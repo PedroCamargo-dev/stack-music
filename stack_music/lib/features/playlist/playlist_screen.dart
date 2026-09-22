@@ -90,6 +90,16 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     }
   }
 
+  Future<void> _downloadPlaylist() async {
+    final downloader = context.read<AppState>().downloader;
+    if (downloader == null) return;
+    await downloader.enqueuePlaylist(playlist, songs: songs);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Playlist adicionada à fila de downloads')),
+    );
+  }
+
   Future<void> _removeFromPlaylist(SubsonicSong song, int index) async {
     final client = context.read<AppState>().subsonic;
     if (client == null) return;
@@ -114,7 +124,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   void _showTrackMenu(SubsonicSong song, int index) {
-    final player = context.read<AppState>().player;
+    final app = context.read<AppState>();
+    final player = app.player;
+    final downloader = app.downloader;
+    final downloaded = app.downloadStore?.isDownloaded(song.id) ?? false;
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -128,6 +141,25 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                 Navigator.pop(ctx);
                 player?.playQueue(songs, startIndex: index);
               },
+            ),
+            ListTile(
+              leading: Icon(
+                downloaded
+                    ? Icons.delete_outline
+                    : Icons.download_for_offline_outlined,
+              ),
+              title: Text(downloaded ? 'Remover download' : 'Baixar faixa'),
+              onTap: downloader == null
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      if (downloaded) {
+                        await downloader.removeDownload(song.id);
+                      } else {
+                        await downloader.enqueueTrack(song);
+                      }
+                      if (mounted) setState(() {});
+                    },
             ),
             ListTile(
               leading: Icon(
@@ -237,6 +269,15 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                             const SizedBox(height: 16),
                             // Ações: Favorite + Play dominante + Shuffle
                             Row(children: [
+                              IconButton.outlined(
+                                tooltip: 'Baixar playlist',
+                                onPressed:
+                                    songs.isEmpty ? null : _downloadPlaylist,
+                                icon: const Icon(
+                                  Icons.download_for_offline_outlined,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               IconButton.outlined(
                                 onPressed: _toggleFavorite,
                                 icon: Icon(

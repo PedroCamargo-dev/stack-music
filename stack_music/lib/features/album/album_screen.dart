@@ -82,8 +82,21 @@ class _AlbumScreenState extends State<AlbumScreen> {
     }
   }
 
+  Future<void> _downloadAlbum() async {
+    final downloader = context.read<AppState>().downloader;
+    if (downloader == null) return;
+    await downloader.enqueueAlbum(album);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Álbum adicionado à fila de downloads')),
+    );
+  }
+
   void _showTrackMenu(SubsonicSong song, int index) {
-    final player = context.read<AppState>().player;
+    final app = context.read<AppState>();
+    final player = app.player;
+    final downloader = app.downloader;
+    final downloaded = app.downloadStore?.isDownloaded(song.id) ?? false;
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SafeArea(
@@ -97,6 +110,25 @@ class _AlbumScreenState extends State<AlbumScreen> {
                 Navigator.pop(ctx);
                 player?.playQueue(songs, startIndex: index);
               },
+            ),
+            ListTile(
+              leading: Icon(
+                downloaded
+                    ? Icons.delete_outline
+                    : Icons.download_for_offline_outlined,
+              ),
+              title: Text(downloaded ? 'Remover download' : 'Baixar faixa'),
+              onTap: downloader == null
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      if (downloaded) {
+                        await downloader.removeDownload(song.id);
+                      } else {
+                        await downloader.enqueueTrack(song);
+                      }
+                      if (mounted) setState(() {});
+                    },
             ),
             ListTile(
               leading: Icon(
@@ -221,6 +253,14 @@ class _AlbumScreenState extends State<AlbumScreen> {
                             const SizedBox(height: 16),
                             // Ações: Favorite + Play dominante + Shuffle
                             Row(children: [
+                              IconButton.outlined(
+                                tooltip: 'Baixar álbum',
+                                onPressed: songs.isEmpty ? null : _downloadAlbum,
+                                icon: const Icon(
+                                  Icons.download_for_offline_outlined,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               IconButton.outlined(
                                 onPressed: _toggleFavorite,
                                 icon: Icon(

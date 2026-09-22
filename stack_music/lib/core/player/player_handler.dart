@@ -3,19 +3,28 @@ import 'package:just_audio/just_audio.dart';
 
 import '../api/subsonic_client.dart';
 import '../models/subsonic_models.dart';
+import 'track_uri_resolver.dart';
 
 /// Handler do audio_service: expõe controles na notificação/lock screen,
 /// mantém fila, shuffle, repeat e faz scrobble ao completar faixa.
 class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  final SubsonicClient client;
  final AudioPlayer player = AudioPlayer();
+ late final TrackUriResolver _uriResolver;
 
  final List<SubsonicSong> _queue = [];
  int _index = -1;
  bool _shuffle = false;
  bool _scrobbled = false;
 
- PlayerHandler(this.client) {
+ PlayerHandler(
+   this.client, {
+   String? Function(String trackId)? localPathFor,
+ }) {
+ _uriResolver = TrackUriResolver(
+   streamUrlFor: client.streamUrl,
+   localPathFor: localPathFor ?? (_) => null,
+ );
  player.playbackEventStream.map(_toState).pipe(playbackState);
  player.sequenceStateStream.listen(_onSequenceChanged);
  player.playerStateStream.listen((s) {
@@ -102,7 +111,7 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
     final source = ConcatenatingAudioSource(
       children: songs
-          .map((s) => AudioSource.uri(Uri.parse(client.streamUrl(s.id))))
+          .map((song) => AudioSource.uri(_uriResolver.resolve(song)))
           .toList(),
     );
     await player.setAudioSource(source, initialIndex: _index);
@@ -178,8 +187,9 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
 
  Future<void> _rebuildSource() async {
  final src = ConcatenatingAudioSource(
- children:
- _queue.map((s) => AudioSource.uri(Uri.parse(client.streamUrl(s.id)))).toList());
+ children: _queue
+     .map((song) => AudioSource.uri(_uriResolver.resolve(song)))
+     .toList());
  await player.setAudioSource(src,
  initialIndex: _index < 0 ? 0 : (_index < _queue.length ? _index : 0),
  initialPosition: Duration.zero);
@@ -189,7 +199,7 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  Future<void> addToQueue(SubsonicSong song) async {
  _queue.add(song);
  await (player.audioSource as ConcatenatingAudioSource)
- .add(AudioSource.uri(Uri.parse(client.streamUrl(song.id))));
+ .add(AudioSource.uri(_uriResolver.resolve(song)));
  }
 
  Future<void> savePlayQueue() async {

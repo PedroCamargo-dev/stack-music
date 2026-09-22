@@ -94,8 +94,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AppState>().subsonic?.username ?? '';
-
     if (loading) {
       debugPrint('[HOME] build: loading=true, mostrando SkeletonList');
       return const Scaffold(body: SkeletonList(count: 8));
@@ -123,11 +121,15 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.only(bottom: 16),
           children: [
             // 1. HEADER COMPACTO (max 64px)
-            _CompactHeader(
-              greeting: '$_greeting${user.isNotEmpty ? ', $user' : ''}',
-              username: user,
-              onSearch: () => widget.tabIndex?.value = 1,
-              onAvatar: () => Navigator.of(context).pushNamed('/profile'),
+            Selector<AppState, String>(
+              selector: (_, app) => app.subsonic?.username ?? '',
+              builder: (_, user, __) => _CompactHeader(
+                greeting:
+                    '$_greeting${user.isNotEmpty ? ', $user' : ''}',
+                username: user,
+                onSearch: () => widget.tabIndex?.value = 1,
+                onAvatar: () => Navigator.of(context).pushNamed('/profile'),
+              ),
             ),
 
             // 2. POPULAR ARTISTS RAIL

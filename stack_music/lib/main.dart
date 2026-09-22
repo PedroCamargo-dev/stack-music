@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -13,6 +15,7 @@ import 'features/player/now_playing_screen.dart';
 import 'features/playlist/playlist_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/favorites/favorites_screen.dart';
+import 'features/downloads/downloads_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'shared/widgets.dart';
@@ -43,6 +46,7 @@ class StackMusicApp extends StatelessWidget {
               '/login': (_) => const LoginScreen(),
               '/nowplaying': (_) => const NowPlayingScreen(),
               '/settings': (_) => const SettingsScreen(),
+              '/downloads': (_) => const DownloadsScreen(),
               '/favorites': (_) => const FavoritesScreen(),
               '/profile': (_) => const ProfileScreen(),
             },
@@ -78,7 +82,26 @@ class RootShell extends StatefulWidget {
   State<RootShell> createState() => _RootShellState();
 }
 
-class _RootShellState extends State<RootShell> {
+class _RootShellState extends State<RootShell> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(context.read<AppState>().refreshServerReachability());
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = context.watch<AppState>();
@@ -111,40 +134,61 @@ class _MainShell extends StatefulWidget {
 class _MainShellState extends State<_MainShell> {
   int _index = 0;
   late final ValueNotifier<int> _tabIndex;
-  final _screens = const [
-    HomeScreen(),
-    SearchScreen(),
-    LibraryScreen(),
-    FavoritesScreen(),
-    SettingsScreen(),
-  ];
+  late final List<Widget?> _screens;
 
   @override
   void initState() {
     super.initState();
     _tabIndex = ValueNotifier<int>(0);
-    _tabIndex.addListener(() {
-      if (_tabIndex.value != _index) setState(() => _index = _tabIndex.value);
+    _screens = [
+      HomeScreen(tabIndex: _tabIndex),
+      null,
+      null,
+      null,
+      null,
+    ];
+    _tabIndex.addListener(_handleTabChange);
+  }
+
+  void _handleTabChange() {
+    final next = _tabIndex.value;
+    if (next == _index) return;
+    setState(() {
+      _index = next;
+      _screens[next] ??= _buildScreen(next);
     });
   }
 
+  Widget _buildScreen(int index) => switch (index) {
+        0 => HomeScreen(tabIndex: _tabIndex),
+        1 => const SearchScreen(),
+        2 => const LibraryScreen(),
+        3 => const FavoritesScreen(),
+        4 => const SettingsScreen(),
+        _ => const SizedBox.shrink(),
+      };
+
   @override
   void dispose() {
+    _tabIndex.removeListener(_handleTabChange);
     _tabIndex.dispose();
     super.dispose();
   }
 
-  void _switchTab(int i) => _tabIndex.value = i;
+  void _switchTab(int index) => _tabIndex.value = index;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: IndexedStack(index: _index, children: [
-          HomeScreen(tabIndex: _tabIndex),
-          ..._screens.skip(1),
-        ]),
+        child: IndexedStack(
+          index: _index,
+          children: List.generate(
+            _screens.length,
+            (index) => _screens[index] ?? const SizedBox.shrink(),
+          ),
+        ),
       ),
       bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
         const MiniPlayer(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/app_state.dart';
+import '../../core/offline/download_quality.dart';
 import '../../core/theme/app_theme.dart';
 
 /// Settings reconstruída: seções agrupadas, itens com ícone + label + status,
@@ -55,6 +56,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: 'Auto',
             onTap: null,
           ),
+          _SettingItem(
+            icon: Icons.high_quality_outlined,
+            label: 'Download quality',
+            value: app.downloadQuality.label,
+            onTap: () => _editDownloadQuality(context, app),
+          ),
           const SizedBox(height: 8),
           _SectionTitle(label: 'Interface'),
           _SettingItem(
@@ -85,10 +92,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 8),
           _SectionTitle(label: 'Storage'),
           _SettingItem(
-            icon: Icons.folder_outlined,
-            label: 'Cache size',
-            value: '—',
-            onTap: null,
+            icon: Icons.download_for_offline_outlined,
+            label: 'Downloads',
+            value: app.downloadStore == null
+                ? '—'
+                : '${app.downloadStore!.tracks.length} • ${app.downloadStore!.formatBytes(app.downloadStore!.totalDownloadedBytes)}',
+            onTap: () => Navigator.of(context).pushNamed('/downloads'),
           ),
           const SizedBox(height: 8),
           _SectionTitle(label: 'Account'),
@@ -118,6 +127,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _editDownloadQuality(
+    BuildContext context,
+    AppState app,
+  ) async {
+    final selected = await showModalBottomSheet<DownloadQuality>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text(
+                'Download quality',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+            for (final quality in DownloadQuality.values)
+              ListTile(
+                leading: Icon(
+                  quality == app.downloadQuality
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                ),
+                title: Text(quality.label),
+                onTap: () => Navigator.pop(sheetContext, quality),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected != null) {
+      await app.setDownloadQuality(selected);
+    }
   }
 
   Future<void> _editDownloadApi(BuildContext context, AppState app) async {
