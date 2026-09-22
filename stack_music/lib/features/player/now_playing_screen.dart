@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/api/lrclib_client.dart';
 import '../../core/api/subsonic_client.dart';
 import '../../core/app_state.dart';
 import '../../core/models/subsonic_models.dart';
@@ -29,20 +30,50 @@ class NowPlayingScreen extends StatefulWidget {
 }
 
 class _NowPlayingScreenState extends State<NowPlayingScreen> {
- Lyrics? _lyrics;
- bool _lyricsOpen = false;
+  Lyrics? _lyrics;
+  bool _lyricsOpen = false;
+  LrcLibClient? _lrcClient;
+
+  @override
+  void dispose() {
+    _lrcClient?.dispose();
+    super.dispose();
+  }
 
  Future<void> _loadLyrics(SubsonicSong song) async {
- try {
- final l = await context
- .read<AppState>()
- .subsonic!
- .getLyrics(song.artist, song.title);
- if (mounted) setState(() => _lyrics = l);
- } catch (_) {
- if (mounted) setState(() => _lyrics = null);
- }
- }
+     try {
+       final l = await context
+           .read<AppState>()
+           .subsonic!
+           .getLyrics(song.artist, song.title);
+       if (l != null && l.text.isNotEmpty) {
+         if (mounted) setState(() => _lyrics = l);
+         return;
+       }
+     } catch (_) {}
+
+     // Fallback: LRCLib (letras sincronizadas ou texto puro)
+     try {
+       _lrcClient?.dispose();
+       _lrcClient = LrcLibClient();
+       final result = await _lrcClient!.getLyrics(song.artist, song.title);
+       if (result?.bestText != null && result!.bestText!.isNotEmpty) {
+         if (mounted) {
+           setState(() {
+             _lyrics = Lyrics(
+               artist: result.artist,
+               title: result.title,
+               text: result.bestText!,
+             );
+           });
+         }
+       } else if (mounted) {
+         setState(() => _lyrics = null);
+       }
+     } catch (_) {
+       if (mounted) setState(() => _lyrics = null);
+     }
+   }
 
  void _openQueue() {
      showModalBottomSheet<void>(
