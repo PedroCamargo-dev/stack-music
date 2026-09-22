@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../core/app_state.dart';
 import '../core/models/subsonic_models.dart';
 import '../core/theme/app_theme.dart';
+import 'star_rating.dart';
 
 // ============================================================
 // ShellTabController: permite que widgets filhos troquem a aba ativa
@@ -361,11 +362,26 @@ class TrackRow extends StatelessWidget {
  fontSize: 15,
  fontWeight: FontWeight.w600,
  color: isCurrent ? AppColors.primary : AppColors.textPrimary(b))),
- subtitle: Text(song.album.isNotEmpty ? '${song.artist} • ${song.album}' : song.artist,
- maxLines: 1,
- overflow: TextOverflow.ellipsis,
- style: TextStyle(
- fontSize: 13, color: AppColors.textSecondary(b))),
+ subtitle: Column(
+           crossAxisAlignment: CrossAxisAlignment.start,
+           children: [
+             Text(song.album.isNotEmpty ? '${song.artist} • ${song.album}' : song.artist,
+                 maxLines: 1,
+                 overflow: TextOverflow.ellipsis,
+                 style: TextStyle(
+                     fontSize: 13, color: AppColors.textSecondary(b))),
+             StarRating(
+               rating: song.userRating,
+               size: 14,
+               onRate: (newRating) async {
+                 final client = app.subsonic;
+                 if (client == null) return;
+                 await client.setRating(song.id, newRating);
+                 song.userRating = newRating;
+               },
+             ),
+           ],
+         ),
  trailing: trailing ??
  Row(mainAxisSize: MainAxisSize.min, children: [
  if (isCurrent && state?.player.playing == true)
