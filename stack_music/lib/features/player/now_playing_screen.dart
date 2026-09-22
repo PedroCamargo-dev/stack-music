@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../core/api/subsonic_client.dart';
 import '../../core/app_state.dart';
 import '../../core/models/subsonic_models.dart';
+import '../../core/player/player_handler.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets.dart';
 
@@ -43,12 +44,82 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  }
 
  void _openQueue() {
- showModalBottomSheet<void>(
- context: context,
- isScrollControlled: true,
- builder: (_) => const QueueSheet(),
- );
- }
+     showModalBottomSheet<void>(
+       context: context,
+       isScrollControlled: true,
+       builder: (_) => const QueueSheet(),
+     );
+   }
+
+   void _showSleepTimerSheet(PlayerHandler state) {
+     showModalBottomSheet<void>(
+       context: context,
+       builder: (ctx) => SafeArea(
+         child: Column(
+           mainAxisSize: MainAxisSize.min,
+           children: [
+             ListTile(
+               title: const Text('15 min'),
+               onTap: () {
+                 state.setSleepTimer(const Duration(minutes: 15));
+                 Navigator.pop(ctx);
+               },
+             ),
+             ListTile(
+               title: const Text('30 min'),
+               onTap: () {
+                 state.setSleepTimer(const Duration(minutes: 30));
+                 Navigator.pop(ctx);
+               },
+             ),
+             ListTile(
+               title: const Text('45 min'),
+               onTap: () {
+                 state.setSleepTimer(const Duration(minutes: 45));
+                 Navigator.pop(ctx);
+               },
+             ),
+             ListTile(
+               title: const Text('60 min'),
+               onTap: () {
+                 state.setSleepTimer(const Duration(hours: 1));
+                 Navigator.pop(ctx);
+               },
+             ),
+             if (state.isSleepTimerActive)
+               ListTile(
+                 title: const Text('Cancelar', style: TextStyle(color: Colors.red)),
+                 onTap: () {
+                   state.cancelSleepTimer();
+                   Navigator.pop(ctx);
+                 },
+               ),
+           ],
+         ),
+       ),
+     );
+   }
+
+   void _showSpeedSheet(PlayerHandler state) {
+     final speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+     showModalBottomSheet<void>(
+       context: context,
+       builder: (ctx) => SafeArea(
+         child: Column(
+           mainAxisSize: MainAxisSize.min,
+           children: speeds.map((s) => ListTile(
+             title: Text('${s.toStringAsFixed(2)}x'),
+             trailing: state.playbackSpeed == s ? const Icon(Icons.check) : null,
+             onTap: () async {
+               await state.setPlaybackSpeed(s);
+               if (mounted) setState(() {});
+               if (ctx.mounted) Navigator.pop(ctx);
+             },
+           )).toList(),
+         ),
+       ),
+     );
+   }
 
  @override
  Widget build(BuildContext context) {
@@ -319,34 +390,68 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  ],
  ),
  ),
- // AÇÕES inferiores: Fila | Letras (somente reais)
- Padding(
- padding: const EdgeInsets.only(bottom: 16),
- child: Row(
- mainAxisAlignment: MainAxisAlignment.center,
- children: [
- TextButton.icon(
- onPressed: _openQueue,
- icon: const Icon(Icons.queue_music,
- color: Colors.white70, size: 20),
- label: const Text('Fila',
- style:
- TextStyle(color: Colors.white70, fontSize: 12)),
- ),
- if (_lyrics != null) ...[
- const SizedBox(width: 24),
- TextButton.icon(
- onPressed: () => setState(() => _lyricsOpen = true),
- icon: const Icon(Icons.lyrics,
- color: Colors.white70, size: 20),
- label: const Text('Letras',
- style:
- TextStyle(color: Colors.white70, fontSize: 12)),
- ),
- ],
- ],
- ),
- ),
+ // AÇÕES inferiores: Fila | Letras | Timer | Speed
+         Padding(
+           padding: const EdgeInsets.only(bottom: 16),
+           child: Row(
+             mainAxisAlignment: MainAxisAlignment.center,
+             children: [
+               TextButton.icon(
+                 onPressed: _openQueue,
+                 icon: const Icon(Icons.queue_music,
+                     color: Colors.white70, size: 20),
+                 label: const Text('Fila',
+                     style:
+                         TextStyle(color: Colors.white70, fontSize: 12)),
+               ),
+               if (_lyrics != null) ...[
+                 const SizedBox(width: 16),
+                 TextButton.icon(
+                   onPressed: () => setState(() => _lyricsOpen = true),
+                   icon: const Icon(Icons.lyrics,
+                       color: Colors.white70, size: 20),
+                   label: const Text('Letras',
+                       style:
+                           TextStyle(color: Colors.white70, fontSize: 12)),
+                 ),
+               ],
+               const SizedBox(width: 16),
+               StreamBuilder<Duration?>(
+                 stream: state.sleepRemainingStream,
+                 builder: (_, snap) {
+                   final remaining = snap.data;
+                   final active = remaining != null;
+                   return TextButton.icon(
+                     onPressed: () => _showSleepTimerSheet(state),
+                     icon: Icon(Icons.timer,
+                         color: active
+                             ? AppColors.primary
+                             : Colors.white70,
+                         size: 20),
+                     label: Text(
+                         active
+                             ? '${remaining.inMinutes}:${(remaining.inSeconds % 60).toString().padLeft(2, '0')}'
+                             : 'Timer',
+                         style: TextStyle(
+                             color: active
+                                 ? AppColors.primary
+                                 : Colors.white70,
+                             fontSize: 12)),
+                   );
+                 },
+               ),
+               const SizedBox(width: 16),
+               TextButton.icon(
+                 onPressed: () => _showSpeedSheet(state),
+                 icon: const Icon(Icons.speed,
+                     color: Colors.white70, size: 20),
+                 label: Text('${state.playbackSpeed.toStringAsFixed(1)}x',
+                     style: const TextStyle(
+                         color: Colors.white70, fontSize: 12)),
+               ),
+             ],
+           ),
+         ),
  ]),
  ),
  ),
