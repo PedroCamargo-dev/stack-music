@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -13,9 +15,16 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  late final TrackUriResolver _uriResolver;
 
  final List<SubsonicSong> _queue = [];
- int _index = -1;
- bool _shuffle = false;
- bool _scrobbled = false;
+   int _index = -1;
+   bool _shuffle = false;
+   bool _scrobbled = false;
+
+   Timer? _sleepTimer;
+   DateTime? _sleepTarget;
+   final StreamController<Duration?> _sleepRemainingController =
+       StreamController<Duration?>.broadcast();
+   Stream<Duration?> get sleepRemainingStream =>
+       _sleepRemainingController.stream;
 
  PlayerHandler(
    this.client, {
@@ -135,13 +144,57 @@ class PlayerHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
  @override
  Future<void> skipToPrevious() => player.seekToPrevious();
 
- @override
- Future<void> stop() async {
- await player.stop();
- _queue.clear();
- _index = -1;
- await super.stop();
- }
+ /// Define um timer para pausar a reprodução após [duration].
+   void setSleepTimer(Duration duration) {
+     _sleepTimer?.cancel();
+     _sleepTarget = DateTime.now().add(duration);
+     _sleepRemainingController.add(duration);
+     _sleepTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+       final remaining = _sleepTarget?.difference(DateTime.now());
+       if (remaining == null || remaining <= Duration.zero) {
+         _sleepTimer?.cancel();
+         _sleepTimer = null;
+         _sleepTarget = null;
+         _sleepRemainingController.add(null);
+         pause();
+       } else {
+         _sleepRemainingController.add(remaining);
+       }
+     });
+   }
+
+   /// Cancela o sleep timer ativo.
+   void cancelSleepTimer() {
+     _sleepTimer?.cancel();
+     _sleepTimer = null;
+     _sleepTarget = null;
+     _sleepRemainingController.add(null);
+   }
+
+   bool get isSleepTimerActive => _sleepTimer != null;
+
+   /// Define a velocidade de reprodução (0.5–2.0). Persiste via SharedPreferences.
+   Future<void> setPlaybackSpeed(double speed) async {
+     final clamped = speed.clamp(0.5, 2.0);
+     await player.setSpeed(clamped);
+   }
+
+   double get playbackSpeed => player.speed;
+
+   void dispose() {
+       cancelSleepTimer();
+       _sleepRemainingController.close();
+       player.dispose();
+     }
+
+     @override
+     Future<void> stop() async {
+     cancelSleepTimer();
+     await player.stop();
+     _queue.clear();
+     _index = -1;
+     await super.stop();
+   }
 
  @override
  Future<void> setShuffleMode(AudioServiceShuffleMode shuffleMode) async {
