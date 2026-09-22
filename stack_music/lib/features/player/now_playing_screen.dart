@@ -10,6 +10,7 @@ import '../../core/app_state.dart';
 import '../../core/models/subsonic_models.dart';
 import '../../core/player/player_handler.dart';
 import '../../core/theme/app_theme.dart';
+import '../../shared/star_rating.dart';
 import '../../shared/widgets.dart';
 
 /// Full Player — RECONSTRUÇÃO VISUAL:
@@ -248,14 +249,27 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
  }
  : null,
  child: Text(song.artist,
- style: TextStyle(
- fontSize: 14,
- color: Colors.white.withValues(alpha: 0.7))),
- ),
- ],
- ),
- ),
- IconButton(
+                               style: TextStyle(
+                                   fontSize: 14,
+                                   color: Colors.white.withValues(alpha: 0.7))),
+                         ),
+                         const SizedBox(height: 6),
+                         StarRating(
+                           rating: song.userRating,
+                           size: 18,
+                           activeColor: AppColors.primary,
+                           inactiveColor: Colors.white.withValues(alpha: 0.3),
+                           onRate: (newRating) async {
+                             final client = app.subsonic;
+                             if (client == null) return;
+                             await client.setRating(song.id, newRating);
+                             setState(() => song.userRating = newRating);
+                           },
+                         ),
+                       ],
+                     ),
+                   ),
+                   IconButton(
  icon: Icon(
  song.starred ? Icons.favorite : Icons.favorite_border,
  color:

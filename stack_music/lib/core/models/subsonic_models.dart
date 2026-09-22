@@ -41,6 +41,7 @@ class SubsonicSong {
   final String? genre;
   final int? playCount;
   bool starred;
+  int userRating;
 
   SubsonicSong({
     required this.id,
@@ -59,6 +60,7 @@ class SubsonicSong {
     this.genre,
     this.playCount,
     this.starred = false,
+    this.userRating = 0,
   });
 
   factory SubsonicSong.fromJson(Map<String, dynamic> j) => SubsonicSong(
@@ -78,6 +80,7 @@ class SubsonicSong {
         genre: j['genre'],
         playCount: j['playCount'],
         starred: j['starred'] != null,
+        userRating: (j['userRating'] as num?)?.toInt() ?? 0,
       );
 
   String get durationLabel {
