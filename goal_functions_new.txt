@@ -1,0 +1,57 @@
+O repositório já foi clonado e li o README + package.json. Agora preciso inspecionar a estrutura de src/ para mapear as features reais (download, offline, player engine, settings) antes de declarar os objetos de melhoria.
+
+Vou inspecionar as features críticas do Yuzic (player engine, downloaders, settings, ratings) para mapear o que falta no Stack Music e declarar os objetos de melhoria. [Client tool call ID: "toolu_1790017254883_1"]
+
+Tenho o mapa completo de features do Yuzic. Agora vou inspecionar os arquivos críticos de download/offline, player engine e settings para extrair a lógica real (não só nomes) antes de declarar os objetos de melhoria para o Stack Music.
+
+Com base na análise completa do repositório Yuzic (/tmp/yuzic) e comparando com o estado atual do Stack Music, aqui estão os Objetos de Melhoria Funcional declarados. Estes são gaps reais de funcionalidade (não estilo) que devem ser implementados no Stack Music:
+
+1. Sistema de Download & Offline Robusto
+O Stack Music tem apenas streaming. O Yuzic tem um sistema de download completo.
+
+Download Manager com Fila Persistente: Suporte a downloads de álbuns/playlists inteiros com fila que sobrevive ao fechamento do app (PersistedDownloadJob, jobQueue.ts).
+Downloads Retomáveis: Capacidade de pausar e retomar downloads de faixas grandes sem perder progresso (PersistedResumable, resumeState.ts).
+Modo Offline Automático: Detecção de conectividade (useIsOffline, ServerReachabilityWatcher) que alterna automaticamente para mídia baixada quando o servidor está inacessível.
+Gerenciamento de Armazenamento: Tela dedicada para gerenciar downloads, ver espaço usado e limpar cache (DownloadsScreen, formatBytes).
+Qualidade de Download Configurável: Opções para baixar em baixa/média/alta/original independente da qualidade de streaming (DOWNLOAD_QUALITY_OPTIONS).
+2. Player Engine Avançado
+O player atual do Stack Music é básico (play/pause/skip). O Yuzic tem engine profissional.
+
+Crossfade & Gapless Playback: Transição suave entre faixas e reprodução sem gaps (yuzic-engine, playbackCoordinator).
+Equalizador de 10 Bandas: EQ nativo integrado ao player (features/settings/equalizer).
+Sleep Timer: Temporizador para parar a reprodução após X minutos ou N faixas (sleepTimer.ts).
+Velocidade de Reprodução Variável: Controle de playback speed (0.5x - 2.0x) com preservação de pitch (speedProfile.ts).
+Autoplay Inteligente: Quando a fila acaba, o player busca faixas similares automaticamente (autoplayCoordinator, autoplayFill).
+Replay Gain: Normalização de volume entre faixas baseada em metadados.
+3. Ratings & Scrobbling
+O Stack Music só tem "favoritar" (star). O Yuzic tem sistema de avaliação completo.
+
+Star Rating (1-5 estrelas): Avaliação granular de faixas/álbuns sincronizada com o servidor Navidrome (useRatings, StarRating).
+Scrobbling para Last.fm / ListenBrainz: Envio automático de histórico de reprodução para serviços externos (outgoingScrobble, listenbrainz integration).
+Ratings Optimistic UI: Atualização imediata da UI com rollback se o servidor falhar (useSetRating optimistic update pattern).
+4. Integrações Externas (Downloaders)
+O Stack Music depende de uma API customizada. O Yuzic integra nativamente com:
+
+Soulseek (via slskd): Busca e download direto da rede P2P (providers/integration/slskd).
+Lidarr: Integração com gerenciador de música para monitorar artistas (providers/integration/lidarr).
+Deezer / MusicBrainz: Metadados enriquecidos e fallback de capas (providers/integration/deezer, musicbrainz).
+LRCLib: Letras de música sincronizadas via serviço dedicado (providers/integration/lrclib).
+5. Conectividade Multi-Servidor
+O Stack Music suporta apenas 1 servidor Navidrome por vez.
+
+Múltiplos Servidores Simultâneos: Suporte a Navidrome + Jellyfin + Emby + Plex + Local Files no mesmo app (providers/server/*).
+Server Discovery: Descoberta automática de servidores na rede local (onboarding/discovery).
+mTLS / Client Certificates: Suporte a autenticação via certificado cliente para servidores seguros (features/mtls).
+6. Library Sync & Local-First
+O Stack Music sempre consulta o servidor. O Yuzic tem cache inteligente.
+
+Catalog Sync: Sincronização periódica do catálogo para busca offline instantânea (catalogSync.ts, useSync).
+Local-First Architecture: Leituras优先 do cache local, writes otimistas no servidor (localFirst.ts, offlineMutations).
+Listening Stats Locais: Histórico de reprodução e estatísticas pessoais armazenados localmente (listeningStats, listenerModel).
+Prioridade de Implementação Recomendada
+Download Manager + Offline Mode (funcionalidade mais crítica para app de música móvel)
+Ratings (1-5 stars) (gap simples de implementar, alto valor para usuários Navidrome)
+Sleep Timer + Playback Speed (features de player essenciais, baixo esforço)
+Multi-servidor (complexo, mas diferencial competitivo)
+Integrações externas (slskd/Lidarr) (avançado, nicho específico)
+Todos os objetos acima foram extraídos diretamente do código-fonte do Yuzic e representam funcionalidades ausentes no Stack Music atual. As features já existentes e funcionais (Home, Search básica, Library tabs, Favorites, MiniPlayer, Full Player) devem ser preservadas conforme solicitado.

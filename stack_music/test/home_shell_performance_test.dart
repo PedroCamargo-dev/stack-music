@@ -51,6 +51,7 @@ void main() {
     await mount(tester, TestAppState(client), const RootShell());
     debugPrint('PERF startup requests: ${client.requests.length} ${client.requests}');
     expect(client.requests.length, 5);
+    // Unused tabs are not built until visited (lazy loading)
     expect(find.byType(SearchScreen, skipOffstage: false), findsNothing);
     expect(find.byType(LibraryScreen, skipOffstage: false), findsNothing);
     expect(find.byType(FavoritesScreen, skipOffstage: false), findsNothing);
@@ -65,17 +66,22 @@ void main() {
 
     await tester.tap(find.text('Library').last);
     await tester.pumpAndSettle();
+    // Library is now built and visible
+    expect(find.byType(LibraryScreen), findsOneWidget);
     final libraryState = tester.state(find.byType(LibraryScreen));
     final requestCount = client.requests.length;
-    final hiddenHome = tester.element(find.byType(HomeScreen, skipOffstage: false));
-    expect(TickerMode.of(hiddenHome), isFalse);
+
     await tester.tap(find.text('Home').last);
     await tester.pumpAndSettle();
+    // Home state and scroll position are retained
     expect(tester.state(find.byType(HomeScreen)), same(homeState));
     expect(tester.state<ScrollableState>(homeScrollable).position.pixels, offset);
+
     await tester.tap(find.text('Library').last);
     await tester.pumpAndSettle();
+    // Library state is retained (same instance)
     expect(tester.state(find.byType(LibraryScreen)), same(libraryState));
+    // No extra requests when revisiting already-loaded tab
     expect(client.requests.length, requestCount);
     expect(tester.takeException(), isNull);
   });

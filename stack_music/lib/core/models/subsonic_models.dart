@@ -32,6 +32,9 @@ class SubsonicSong {
   final String album;
   final String albumId;
   final String? coverArt;
+  final String? suffix;
+  final String? contentType;
+  final int? bitRate;
   final int duration; // segundos
   final int? track;
   final int? year;
@@ -47,6 +50,9 @@ class SubsonicSong {
     this.album = '',
     this.albumId = '',
     this.coverArt,
+    this.suffix,
+    this.contentType,
+    this.bitRate,
     this.duration = 0,
     this.track,
     this.year,
@@ -63,6 +69,9 @@ class SubsonicSong {
         album: j['album'] ?? '',
         albumId: j['albumId']?.toString() ?? '',
         coverArt: j['coverArt']?.toString(),
+        suffix: j['suffix']?.toString(),
+        contentType: j['contentType']?.toString(),
+        bitRate: j['bitRate'] as int?,
         duration: j['duration'] ?? 0,
         track: j['track'],
         year: j['year'],
