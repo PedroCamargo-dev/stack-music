@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_state.dart';
 import '../../core/offline/download_quality.dart';
 import '../../core/theme/app_theme.dart';
+import 'library_sync_settings_screen.dart';
 
 /// Settings reconstruída: seções agrupadas, itens com ícone + label + status,
 /// chevron se navegável, logout com confirmação. Só mostra o que funciona.
@@ -98,6 +99,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? '—'
                 : '${app.downloadStore!.tracks.length} • ${app.downloadStore!.formatBytes(app.downloadStore!.totalDownloadedBytes)}',
             onTap: () => Navigator.of(context).pushNamed('/downloads'),
+          ),
+          const SizedBox(height: 8),
+          _SectionTitle(label: 'Sync'),
+          _SettingItem(
+            icon: Icons.cloud_sync_outlined,
+            label: 'Library Sync',
+            value: app.librarySyncEnabled ? 'On' : 'Off',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LibrarySyncSettingsScreen()),
+            ),
           ),
           const SizedBox(height: 8),
           _SectionTitle(label: 'Account'),

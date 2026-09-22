@@ -22,6 +22,13 @@ class AppState extends ChangeNotifier {
   String downloadApiUrl = '';
   DownloadQuality downloadQuality = DownloadQuality.original;
 
+  // Library Sync Local-First (configurável)
+  bool librarySyncEnabled = false;
+  bool librarySyncCacheMetadata = true;
+  bool librarySyncPlaylists = false;
+  bool librarySyncFavorites = false;
+  String librarySyncMode = 'background'; // 'background' | 'manual'
+
   bool _ready = false;
   bool _serverReachable = false;
 
@@ -38,6 +45,7 @@ class AppState extends ChangeNotifier {
       downloadQuality = DownloadQuality.fromStorage(
         preferences.getString('download_quality'),
       );
+      await loadLibrarySyncPrefs();
       downloadApi = DownloadApiClient(baseUrl: downloadApiUrl);
 
       downloadStore = DownloadStore();
@@ -83,6 +91,52 @@ class AppState extends ChangeNotifier {
     downloadQuality = quality;
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString('download_quality', quality.name);
+    notifyListeners();
+  }
+
+  // --- Library Sync Local-First ---
+
+  Future<void> loadLibrarySyncPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    librarySyncEnabled = prefs.getBool('library_sync_enabled') ?? false;
+    librarySyncCacheMetadata = prefs.getBool('library_sync_cache_metadata') ?? true;
+    librarySyncPlaylists = prefs.getBool('library_sync_playlists') ?? false;
+    librarySyncFavorites = prefs.getBool('library_sync_favorites') ?? false;
+    librarySyncMode = prefs.getString('library_sync_mode') ?? 'background';
+  }
+
+  Future<void> setLibrarySyncEnabled(bool value) async {
+    librarySyncEnabled = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('library_sync_enabled', value);
+    notifyListeners();
+  }
+
+  Future<void> setLibrarySyncCacheMetadata(bool value) async {
+    librarySyncCacheMetadata = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('library_sync_cache_metadata', value);
+    notifyListeners();
+  }
+
+  Future<void> setLibrarySyncPlaylists(bool value) async {
+    librarySyncPlaylists = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('library_sync_playlists', value);
+    notifyListeners();
+  }
+
+  Future<void> setLibrarySyncFavorites(bool value) async {
+    librarySyncFavorites = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('library_sync_favorites', value);
+    notifyListeners();
+  }
+
+  Future<void> setLibrarySyncMode(String mode) async {
+    librarySyncMode = mode;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('library_sync_mode', mode);
     notifyListeners();
   }
 
