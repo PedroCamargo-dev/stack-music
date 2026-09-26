@@ -1,3 +1,8 @@
 data/*
 node_modules/*
 docker-compose.local.yaml
+
+.maestri
+.claude*
+.hermes*
+.playwright*
